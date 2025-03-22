@@ -217,44 +217,46 @@ const ChattingAvatar = () => {
       setIsRecording(false);
       return;
     }
-
+  
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-
+  
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
-
+  
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, {
           type: "audio/wav",
         });
-
-        const audioFile = new File([audioBlob], "recording.mp3", {
-          type: "audio/mp3",
-        });
-
-        const formData = new FormData();
-        formData.append("audio", audioFile);
-
-        const url = URL.createObjectURL(audioBlob);
-        setAudioURL(url);
+  
+        // Add a loading message
         setChatHistory((prev) => ({
           ...prev,
           [selectedModel]: [
             ...prev[selectedModel],
-            { sender: "user", audio: url },
+            { sender: "user", text: "Recording audio...", isLoading: true },
           ],
         }));
-
+  
+        const audioFile = new File([audioBlob], "recording.wav", {
+          type: "audio/wav",
+        });
+  
+        const formData = new FormData();
+        formData.append("audio", audioFile);
+  
         try {
-          const response = await axios.post(
-            "http://localhost:5000/upload-audio",
+          // Indicate that speech processing is happening
+          toast.loading("Processing your speech...");
+          
+          const response = await axiosClient.post(
+            "http://localhost:5000/transcribe",
             formData,
             {
               headers: {
@@ -262,35 +264,110 @@ const ChattingAvatar = () => {
               },
             }
           );
-
-          if (!response.data.success) throw new Error("Failed to upload audio");
-
-          const audioURLFromServer = response.data.audioUrl;
-
+  
+          // Remove loading message
+          setChatHistory((prev) => ({
+            ...prev,
+            [selectedModel]: prev[selectedModel].filter(msg => msg.isLoading),
+          }));
+  
+          // Process the response
+          if (response.data && response.data.response) {
+            // Get the transcribed text
+            const transcribedText = response.data.transcription?.text || "Audio could not be transcribed";
+            
+            // Get AI's response content
+            const responseContent = 
+              response.data.response.content ||
+              "Sorry, I couldn't process your audio message.";
+            
+            // Add the user's transcribed message to the chat
+            setChatHistory((prev) => ({
+              ...prev,
+              [selectedModel]: [
+                ...prev[selectedModel],
+                { 
+                  sender: "user", 
+                  text: `🎤 ${transcribedText}`,
+                  audio: URL.createObjectURL(audioBlob)  // Include playable audio
+                },
+              ],
+            }));
+            
+            // Add the AI's response
+            setChatHistory((prev) => ({
+              ...prev,
+              [selectedModel]: [
+                ...prev[selectedModel],
+                {
+                  sender: "ai",
+                  text: responseContent,
+                  responseCode: response.data.response.response_code,
+                  moduleReference: response.data.response.module_reference,
+                  relatedTransactions: response.data.response.related_transactions,
+                  suggestedReports: response.data.response.suggested_reports,
+                },
+              ],
+            }));
+            
+            toast.success("Audio processed successfully!");
+            
+            // If there are source documents, show a notification
+            if (response.data.source_docs && response.data.source_docs.length > 0) {
+              toast.info(`Found ${response.data.source_docs.length} relevant sources`);
+            }
+          } else {
+            // Handle error case
+            setChatHistory((prev) => ({
+              ...prev,
+              [selectedModel]: [
+                ...prev[selectedModel],
+                { sender: "user", audio: URL.createObjectURL(audioBlob) },
+                {
+                  sender: "ai",
+                  text: "Sorry, I received an invalid response format for your audio.",
+                },
+              ],
+            }));
+            toast.error("Failed to process audio response.");
+          }
+        } catch (error) {
+          console.error("Error processing audio:", error);
+          
+          // Remove loading message
+          setChatHistory((prev) => ({
+            ...prev,
+            [selectedModel]: prev[selectedModel].filter(msg => msg.isLoading),
+          }));
+          
+          // Add error messages
           setChatHistory((prev) => ({
             ...prev,
             [selectedModel]: [
               ...prev[selectedModel],
-              { sender: "user", audio: audioURLFromServer },
+              { sender: "user", audio: URL.createObjectURL(audioBlob) },
+              {
+                sender: "ai",
+                text: "Sorry, I encountered an error while processing your audio. Please try again.",
+              },
             ],
           }));
-
-          toast.success("Audio uploaded successfully!");
-        } catch (error) {
-          console.error("Error uploading audio:", error);
-          toast.error("Failed to upload audio.");
+          toast.error("Failed to process audio. " + (error.response?.data?.error || error.message));
         }
+        
+        // Clean up the stream after processing
+        stream.getTracks().forEach(track => track.stop());
       };
-
+  
       mediaRecorder.start();
       setIsRecording(true);
-      toast.info("Recording started...");
+      toast.info("Recording started... Press the microphone button again to stop.");
     } catch (error) {
       console.error("Error accessing microphone:", error);
       toast.error("Microphone access denied!");
     }
   };
-
+  
   const handlePlayAudio = (url) => {
     const audio = new Audio(url);
     audio.play();
