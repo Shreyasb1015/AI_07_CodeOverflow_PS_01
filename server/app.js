@@ -16,6 +16,7 @@ import socialRouter from "./routes/social_routes.js";
 import conversationRouter from "./routes/conversation_routes.js";
 import meetingRouter from "./routes/meeting_routes.js"
 import avatarRouter from "./routes/ai_avatar_routes.js"
+import complaintRouter from "./routes/complaint_routes.js"
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,7 +46,8 @@ app.use(API_ROUTES.USER, userRouter);
 app.use(API_ROUTES.SOCIAL, socialRouter);
 app.use(API_ROUTES.CHAT, conversationRouter);
 app.use(API_ROUTES.MEETING, meetingRouter);
-app.use(API_ROUTES.AVATAR,avatarRouter)
+app.use(API_ROUTES.AVATAR,avatarRouter);
+app.use(API_ROUTES.COMPLAINT,complaintRouter)
 
 const io = new Server(server, {
   cors: {

@@ -1,0 +1,92 @@
+import { Complaint } from "../models/complaint_model.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/ApiError.js";
+
+
+const checkAdmin = (req) => {
+  if (!req.user || req.user.role !== "Administrator") {
+    throw new ApiError(403, "Access denied. Admins only.");
+  }
+};
+
+
+export const createComplaint = asyncHandler(async (req, res) => {
+  try {
+    const { userId, aiAvatarId, issueType, description } = req.body;
+
+    if (!userId || !aiAvatarId || !issueType || !description) {
+      throw new ApiError(400, "All fields are required");
+    }
+
+    const complaint = await Complaint.create({
+      userId,
+      aiAvatarId,
+      issueType,
+      description,
+    });
+
+    res.status(201).json({ success: true, complaint });
+  } catch (error) {
+    throw new ApiError(500, error.message);
+  }
+});
+
+
+export const getAllComplaints = asyncHandler(async (req, res) => {
+  try {
+    checkAdmin(req); 
+
+    const complaints = await Complaint.find()
+      .populate("userId", "name email")
+      .populate("aiAvatarId", "name");
+
+    res.status(200).json({ success: true, complaints });
+  } catch (error) {
+    throw new ApiError(500, error.message);
+  }
+});
+
+
+export const getComplaintById = asyncHandler(async (req, res) => {
+  try {
+    checkAdmin(req); 
+
+    const { id } = req.params;
+    const complaint = await Complaint.findById(id)
+      .populate("userId", "name email")
+      .populate("aiAvatarId", "name");
+
+    if (!complaint) throw new ApiError(404, "Complaint not found");
+
+    res.status(200).json({ success: true, complaint });
+  } catch (error) {
+    throw new ApiError(500, error.message);
+  }
+});
+
+
+export const updateComplaintStatus = asyncHandler(async (req, res) => {
+  try {
+    checkAdmin(req); 
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ["Pending", "In Progress", "Resolved", "Rejected"];
+    if (!validStatuses.includes(status)) {
+      throw new ApiError(400, "Invalid status");
+    }
+
+    const complaint = await Complaint.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
+
+    if (!complaint) throw new ApiError(404, "Complaint not found");
+
+    res.status(200).json({ success: true, complaint });
+  } catch (error) {
+    throw new ApiError(500, error.message);
+  }
+});
