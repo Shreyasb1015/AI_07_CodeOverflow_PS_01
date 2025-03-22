@@ -758,6 +758,155 @@ def cleanup_old_sessions():
                 del emotion_locks[session_id]
     except Exception as e:
         print(f"Error during session cleanup: {e}")
+        
+        
+    
+
+HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/facebook/wav2vec2-base-960h"
+HEADERS = {
+    "Authorization": f"Bearer {os.getenv('HUGGINGFACE_TOKEN')}"
+}
+
+def transcribe_audio(audio_bytes):
+    response = requests.post(HUGGINGFACE_API_URL, headers=HEADERS, data=audio_bytes)
+    if response.status_code == 200:
+        try:
+            return response.json()
+        except Exception as e:
+            return {"error": "Failed to parse response JSON", "details": str(e)}
+    else:
+        return {"error": f"Hugging Face API Error {response.status_code}", "details": response.text}
+
+@app.route('/transcribe', methods=['POST'])
+def transcribe():
+    if 'audio' not in request.files:
+        return jsonify({"error": "No audio file provided. Use form-data with key 'audio'."}), 400
+
+    audio_file = request.files['audio']
+    audio_bytes = audio_file.read()
+    
+    try:
+        transcription_result = transcribe_audio(audio_bytes)
+        
+        if "error" in transcription_result:
+            return jsonify({
+                "response": {
+                    "response_code": "500",
+                    "content": f"Error in transcription: {transcription_result.get('error', 'Unknown error')}",
+                    "module_reference": None,
+                    "related_transactions": [],
+                    "suggested_reports": []
+                },
+                "source_docs": [],
+                "transcription": transcription_result
+            }), 500
+        user_input = transcription_result.get('text', '')
+        
+        if not user_input or len(user_input.strip()) < 3:  
+            return jsonify({
+                "response": {
+                    "response_code": "422",
+                    "content": "The transcribed audio was too short or couldn't be understood. Please try again.",
+                    "module_reference": None,
+                    "related_transactions": [],
+                    "suggested_reports": []
+                },
+                "source_docs": [],
+                "transcription": {"text": user_input}
+            }), 422
+        
+        print(f"Transcribed text: {user_input}")
+        docs = fetch_from_knowledge_base(user_input)
+        
+        if not docs or len(docs) == 0:
+            model = ChatGoogleGenerativeAI(
+                model="gemini-2.0-flash",
+                api_key=SecretStr(GOOGLE_GEMINI_API_KEY) if GOOGLE_GEMINI_API_KEY else None
+            )
+            full_prompt = f"{MY_PROMPT}\n\nUser Query (from speech): {user_input}\n\nProvide a response in the JSON format specified above."
+            result = model.invoke(full_prompt).content
+            cleaned_result = clean_text_content(str(result))
+            
+            try:
+                parsed_result = json.loads(cleaned_result)
+            except Exception:
+                parsed_result = {
+                    "response_code": "200",
+                    "content": cleaned_result,
+                    "module_reference": None,
+                    "related_transactions": [],
+                    "suggested_reports": []
+                }
+            
+            return jsonify({
+                "response": parsed_result, 
+                "source_docs": [],
+                "transcription": {"text": user_input}
+            })
+        
+        doc_contents = [clean_text_content(doc.page_content) for doc in docs]
+        doc_sources = [doc.metadata.get('source', 'Unknown') if doc.metadata else 'Unknown' for doc in docs]
+        
+        formatted_docs = '\n\n'.join(doc_contents)
+        
+        enhanced_prompt = f"""
+Based on the following information from our knowledge base:
+{'-' * 30}
+{formatted_docs}
+{'-' * 30}
+
+Please answer the user's query from speech: "{user_input}"
+
+Use only the information provided above to answer the query. If the information is not sufficient 
+to provide a complete answer, please state what is known from the provided context and indicate 
+what information is missing.
+"""
+
+        model = ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash",
+            api_key=SecretStr(GOOGLE_GEMINI_API_KEY) if GOOGLE_GEMINI_API_KEY else None
+        )
+        result = model.invoke(enhanced_prompt).content
+        cleaned_result = clean_text_content(str(result))
+        
+        try:
+            result_json = json.loads(cleaned_result)
+        except Exception:
+            result_json = {
+                "response_code": "200",
+                "content": cleaned_result,
+                "module_reference": None,
+                "related_transactions": [],
+                "suggested_reports": []
+            }
+            
+        clean_doc_contents = [clean_text_content(doc.page_content) for doc in docs]
+        
+        response_data = {
+            "response": result_json,
+            "source_docs": [
+                {"content": clean_doc_contents[i], "source": doc_sources[i]} for i in range(len(clean_doc_contents))
+            ],
+            "transcription": {"text": user_input}
+        }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "response": {
+                "response_code": "500",
+                "content": f"An error occurred processing the audio: {str(e)}",
+                "module_reference": None,
+                "related_transactions": [],
+                "suggested_reports": []
+            },
+            "source_docs": [],
+            "transcription": {"error": str(e)}
+        }), 500
+        
     
 
 HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/facebook/wav2vec2-base-960h"
