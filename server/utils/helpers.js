@@ -76,7 +76,7 @@ const sendVerificationEmail = async (userEmail,otp,name) => {
 <body>
     <div class="container">
         <div class="header">
-            <h1>Welcome to Our Platform!</h1>
+            <h1>Welcome to EchoMind!</h1>
         </div>
         <div class="content">
             <p>Hi <strong>${name}</strong>,</p>
