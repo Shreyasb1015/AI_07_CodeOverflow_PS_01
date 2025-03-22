@@ -1,0 +1,7 @@
+Flask
+python-dotenv
+flask-cors
+langchain-google-genai
+pydantic
+Pillow
+pytesseract
