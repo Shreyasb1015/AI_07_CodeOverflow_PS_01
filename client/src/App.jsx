@@ -14,6 +14,7 @@ import Notifications from './pages/Notifications';
 import AcceptForm from "./pages/AcceptForm";
 import ConfirmRequest from "./pages/ConfirmRequest";
 import VideoPage from "./pages/VideoPage";
+import ChattingAvatar from './pages/ChattingAvatar';
 function App() {
 
 
@@ -32,6 +33,7 @@ function App() {
           <Route path="/meet/accept/:meetingId" element={<AcceptForm />} />
           <Route path="/confirm-request" element={<ConfirmRequest />} />
           <Route path="/video/:meetingId" element={<VideoPage />} />
+          <Route path="/chatAvatar" element={<ChattingAvatar />} />
         </Routes>
         <Toaster position="bottom-right" richColors />
      </Router>
