@@ -18,8 +18,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { CHATAVATAR_URL } from "../api/flask_routes";
-import InfiniteMirror from "../components/InfiniteMirror/InfiniteMirror"; // Import the InfiniteMirror component
+import { CHATAVATAR_URL, CHATIMAGE_URL, ANALYZEFRAME_URL } from "../api/flask_routes";
+import InfiniteMirror from "../components/InfiniteMirror/InfiniteMirror";
 
 const ChattingAvatar = () => {
   const { theme } = useTheme();
@@ -31,11 +31,12 @@ const ChattingAvatar = () => {
     3: [],
   });
   const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false);
-  const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false); // State for camera dialog
+  const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [audioURL, setAudioURL] = useState(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const fileInputRef = useRef(null);
 
   const avatarImages = {
     1: "/src/assets/avatar/avatar1.jpg",
@@ -46,35 +47,29 @@ const ChattingAvatar = () => {
   const handleSendMessage = async () => {
     if (message.trim() === "") return;
 
-    // Add user message to chat history
     setChatHistory((prev) => ({
       ...prev,
       [selectedModel]: [...prev[selectedModel], { sender: "user", text: message }],
     }));
 
-    // Store the message before clearing the input field
     const userMessage = message;
     setMessage("");
 
     try {
-      // Show loading state
       setChatHistory((prev) => ({
         ...prev,
         [selectedModel]: [...prev[selectedModel], { sender: "ai", text: "Thinking...", isLoading: true }],
       }));
 
-      // Send request to the chatbot API
       const response = await axiosClient.post(CHATAVATAR_URL, {
         user_input: userMessage,
       });
 
-      // Remove the loading message
       setChatHistory((prev) => ({
         ...prev,
         [selectedModel]: prev[selectedModel].filter((msg) => !msg.isLoading),
       }));
 
-      // Add the API response to chat history
       if (response.data && response.data.response) {
         const responseContent = response.data.response.content || "Sorry, I couldn't process your request.";
 
@@ -104,13 +99,11 @@ const ChattingAvatar = () => {
     } catch (error) {
       console.error("Error sending message to chatbot:", error);
 
-      // Remove any loading message
       setChatHistory((prev) => ({
         ...prev,
         [selectedModel]: prev[selectedModel].filter((msg) => !msg.isLoading),
       }));
 
-      // Add error message to chat history
       setChatHistory((prev) => ({
         ...prev,
         [selectedModel]: [
@@ -119,8 +112,40 @@ const ChattingAvatar = () => {
         ],
       }));
 
-      // Show error toast
       toast.error("Failed to get response from the chatbot.");
+    }
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await axios.post("http://localhost:5000/upload-file", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (!response.data.success) throw new Error("Failed to upload file");
+
+      const fileURL = response.data.fileUrl;
+
+      setChatHistory((prev) => ({
+        ...prev,
+        [selectedModel]: [
+          ...prev[selectedModel],
+          { sender: "user", file: fileURL, type: file.type.startsWith("image") ? "image" : "video" },
+        ],
+      }));
+
+      toast.success("File uploaded successfully!");
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast.error("Failed to upload file.");
     }
   };
 
@@ -263,7 +288,6 @@ const ChattingAvatar = () => {
               Neo
             </Button>
 
-            {/* Complaint Button */}
             <Dialog open={isComplaintDialogOpen} onOpenChange={setIsComplaintDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="destructive" className="w-full">
@@ -312,6 +336,20 @@ const ChattingAvatar = () => {
                       <Play className="h-5 w-5" /> Play Audio
                     </Button>
                   )}
+                  {chat.file && chat.type === "image" && (
+                    <img
+                      src={chat.file}
+                      alt="Uploaded"
+                      className="max-w-[80%] rounded-lg"
+                    />
+                  )}
+                  {chat.file && chat.type === "video" && (
+                    <video
+                      src={chat.file}
+                      controls
+                      className="max-w-[80%] rounded-lg"
+                    />
+                  )}
                   <span className="text-sm text-muted-foreground">
                     {chat.sender === "user" ? "You" : `Model ${selectedModel}`}
                   </span>
@@ -320,16 +358,23 @@ const ChattingAvatar = () => {
             </div>
           </ScrollArea>
           <div className="flex gap-4 p-4 border-t">
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => fileInputRef.current.click()}>
               <Paperclip className="h-5 w-5" />
             </Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              onChange={handleFileUpload}
+              accept="image/*, video/*"
+            />
             <Dialog open={isCameraDialogOpen} onOpenChange={setIsCameraDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <Camera className="h-5 w-5" />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="w-full max-w-4xl h-[80vh]">
+              <DialogContent className="w-full max-w-4xl h-[80vh] left-0 transform translate-x-0">
                 <DialogHeader>
                   <DialogTitle>Infinite Mirror</DialogTitle>
                 </DialogHeader>
