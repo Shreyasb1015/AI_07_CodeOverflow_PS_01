@@ -407,7 +407,7 @@ Please analyze this image and answer the query: "{user_input}"
 
 Consider both the image content and the knowledge base information in your response.
 """
-                    # Fixed: Use the correct message format for Gemini
+                    
                     messages = [
                         {"role": "user", "content": enhanced_prompt},
                         {"role": "user", "content": [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}
@@ -480,25 +480,35 @@ Consider both the image content and the knowledge base information in your respo
         
 @app.route('/analyze-frame', methods=['POST'])
 def analyze_frame():
-    
     try:
         if 'image' not in request.files:
             return jsonify({'error': 'No image part in request'}), 400
 
         image_file = request.files['image']
-        session_id = request.form.get('session_id')
+        
+       
+        client_ip = request.remote_addr
+        user_agent = request.headers.get('User-Agent', 'Unknown')
+        
+    
+        client_cookie = request.cookies.get('session_tracker')
+        if client_cookie:
+            session_id = f"{client_cookie}"
+        else:
+            import uuid
+            session_id = f"session_{uuid.uuid4().hex[:10]}"
+            
         token = request.form.get('token', 'continue')  
         user_input = request.form.get('user_input', '')  
         
-        if not session_id:
-            return jsonify({'error': 'Session ID is required'}), 400
-        
         if image_file.filename == '':
             return jsonify({'error': 'No selected image'}), 400
+            
         if session_id not in emotion_frames:
             emotion_frames[session_id] = []
             emotion_locks[session_id] = Lock()
-
+            print(f"Created new emotion session: {session_id}")
+            
         image_bytes = image_file.read()
         nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -531,18 +541,22 @@ def analyze_frame():
             })
             
             if len(emotion_frames[session_id]) > 20:  
-                emotion_frames[session_id] = emotion_frames[session_id][-30:]
-        
+                emotion_frames[session_id] = emotion_frames[session_id][-20:]
         if token == 'end' and user_input:
-            return process_final_frame(session_id, user_input, img)
-            
-            
-        return jsonify({
+            response = process_final_frame(session_id, user_input, img)
+        
+            resp = jsonify(response)
+            resp.set_cookie('session_tracker', session_id, max_age=1800)  
+            return resp
+               
+        response = jsonify({
             'success': True,
-            'session_id': session_id,
+            'session_id': session_id, 
             'detected_emotion': dominant_emotion,
             'frame_processed': True
         })
+        response.set_cookie('session_tracker', session_id, max_age=1800)  
+        return response
         
     except Exception as e:
         import traceback
@@ -551,7 +565,8 @@ def analyze_frame():
             'success': False,
             'message': f'Error analyzing frame: {str(e)}'
         }), 500
-
+        
+        
 def process_final_frame(session_id, user_input, final_frame_img):
     try:
 
