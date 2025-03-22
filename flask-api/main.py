@@ -17,12 +17,22 @@ from create_knoweldge_base import create_knowledge_base_fn
 from fetch_from_knoweldge_base import fetch_from_knowledge_base
 import json
 import base64
+import cv2
+import numpy as np
+from deepface import DeepFace
+from collections import Counter
+import time
+from threading import Lock
+from flask import session
+
 
 
 app = Flask(__name__)
 CORS(app,supports_credentials=True)
 load_dotenv()
 GOOGLE_GEMINI_API_KEY = os.getenv("GOOGLE_GEMINI_API_KEY")
+emotion_frames = {}  
+emotion_locks = {}   
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -456,7 +466,7 @@ Consider both the image content and the knowledge base information in your respo
         
     except Exception as e:
         import traceback
-        traceback.print_exc()  # Print full traceback for debugging
+        traceback.print_exc()  
         return jsonify({
             "response": {
                 "response_code": "500", 
@@ -467,6 +477,272 @@ Consider both the image content and the knowledge base information in your respo
             }, 
             "source_docs": []
         })
+        
+@app.route('/analyze-frame', methods=['POST'])
+def analyze_frame():
+    
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image part in request'}), 400
+
+        image_file = request.files['image']
+        session_id = request.form.get('session_id')
+        token = request.form.get('token', 'continue')  
+        user_input = request.form.get('user_input', '')  
+        
+        if not session_id:
+            return jsonify({'error': 'Session ID is required'}), 400
+        
+        if image_file.filename == '':
+            return jsonify({'error': 'No selected image'}), 400
+        if session_id not in emotion_frames:
+            emotion_frames[session_id] = []
+            emotion_locks[session_id] = Lock()
+
+        image_bytes = image_file.read()
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        try:
+            analysis = DeepFace.analyze(
+                img_path=img,
+                actions=['emotion'],
+                enforce_detection=False, 
+                detector_backend='opencv'  
+            )
+            
+            if isinstance(analysis, list) and len(analysis) > 0:
+                dominant_emotion = analysis[0]['dominant_emotion']
+                emotion_score = analysis[0]['emotion'][dominant_emotion]
+            else:
+                dominant_emotion = 'unknown'
+                emotion_score = 0
+                
+        except Exception as e:
+            print(f"Error in emotion detection: {e}")
+            dominant_emotion = 'unknown'
+            emotion_score = 0
+        
+        with emotion_locks[session_id]:
+            emotion_frames[session_id].append({
+                'emotion': dominant_emotion,
+                'score': emotion_score,
+                'timestamp': time.time()
+            })
+            
+            if len(emotion_frames[session_id]) > 20:  
+                emotion_frames[session_id] = emotion_frames[session_id][-30:]
+        
+        if token == 'end' and user_input:
+            return process_final_frame(session_id, user_input, img)
+            
+            
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'detected_emotion': dominant_emotion,
+            'frame_processed': True
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': f'Error analyzing frame: {str(e)}'
+        }), 500
+
+def process_final_frame(session_id, user_input, final_frame_img):
+    try:
+
+        with emotion_locks[session_id]:
+            collected_emotions = emotion_frames[session_id].copy()
+            emotion_frames[session_id] = []
+        
+        valid_emotions = [e['emotion'] for e in collected_emotions if e['emotion'] != 'unknown']
+        
+        if valid_emotions:
+            emotion_counts = Counter(valid_emotions)
+            dominant_emotion = emotion_counts.most_common(1)[0][0]
+            confidence = emotion_counts[dominant_emotion] / len(valid_emotions)
+        else:
+            dominant_emotion = 'neutral'
+            confidence = 1.0
+            
+        print(f"Final emotion assessment - {dominant_emotion} (confidence: {confidence:.2f})")
+        
+        emotion_context = {
+            'happy': "The user appears to be in a positive mood. Use an encouraging and enthusiastic tone.",
+            'sad': "The user appears sad. Use a supportive and empathetic tone.",
+            'angry': "The user appears frustrated or angry. Use a calm and solution-focused tone.",
+            'fear': "The user appears concerned or anxious. Use a reassuring tone and provide clear guidance.",
+            'disgust': "The user appears dissatisfied. Address their concerns professionally and offer solutions.",
+            'surprise': "The user appears surprised. Provide thorough explanations.",
+            'neutral': "The user appears neutral. Use a balanced, informative tone."
+        }
+        
+        emotion_guidance = emotion_context.get(dominant_emotion, emotion_context['neutral'])
+        
+        docs = fetch_from_knowledge_base(user_input)
+        
+        if not docs or len(docs) == 0:
+            model = ChatGoogleGenerativeAI(
+                model="gemini-2.0-flash",
+                api_key=SecretStr(GOOGLE_GEMINI_API_KEY) if GOOGLE_GEMINI_API_KEY else None
+            )
+            
+            full_prompt = f"""{MY_PROMPT}
+
+User Query: {user_input}
+
+User's Emotional State: {dominant_emotion}
+Emotional Guidance: {emotion_guidance}
+
+Provide a response in the JSON format specified above, adapting your tone to match the user's emotional state.
+"""
+            
+            result = model.invoke(full_prompt).content
+            cleaned_result = clean_text_content(str(result))
+            
+            try:
+                parsed_result = json.loads(cleaned_result)
+                
+                parsed_result['detected_emotion'] = dominant_emotion
+                parsed_result['emotion_confidence'] = confidence
+                
+            except Exception:
+                parsed_result = {
+                    "response_code": "200",
+                    "content": cleaned_result,
+                    "module_reference": None,
+                    "related_transactions": [],
+                    "suggested_reports": [],
+                    "detected_emotion": dominant_emotion,
+                    "emotion_confidence": confidence
+                }
+                
+            return jsonify({
+                "response": parsed_result, 
+                "source_docs": [],
+                "emotion_analysis": {
+                    "dominant_emotion": dominant_emotion,
+                    "confidence": confidence,
+                    "emotion_counts": dict(emotion_counts) if valid_emotions else {"neutral": 1}
+                }
+            })
+        
+        doc_contents = [clean_text_content(doc.page_content) for doc in docs]
+        doc_sources = [doc.metadata.get('source', 'Unknown') if doc.metadata else 'Unknown' for doc in docs]
+        
+        formatted_docs = '\n\n'.join(doc_contents)
+        
+        enhanced_prompt = f"""
+Based on the following information from our knowledge base:
+{'-' * 30}
+{formatted_docs}
+{'-' * 30}
+
+Please answer the user's query: "{user_input}"
+
+User's Emotional State: {dominant_emotion}
+Emotional Guidance: {emotion_guidance}
+
+Use only the information provided above to answer the query, while adapting your tone to match the user's emotional state.
+If the information is not sufficient to provide a complete answer, please state what is known from the provided context 
+and indicate what information is missing.
+"""
+
+        model = ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash",
+            api_key=SecretStr(GOOGLE_GEMINI_API_KEY) if GOOGLE_GEMINI_API_KEY else None
+        )
+        
+        result = model.invoke(enhanced_prompt).content
+        cleaned_result = clean_text_content(str(result))
+        
+        try:
+            result_json = json.loads(cleaned_result)
+            
+            result_json['detected_emotion'] = dominant_emotion
+            result_json['emotion_confidence'] = confidence
+            
+        except Exception:
+            result_json = {
+                "response_code": "200",
+                "content": cleaned_result,
+                "module_reference": None,
+                "related_transactions": [],
+                "suggested_reports": [],
+                "detected_emotion": dominant_emotion,
+                "emotion_confidence": confidence
+            }
+        
+        clean_doc_contents = [clean_text_content(doc.page_content) for doc in docs]
+        
+        response_data = {
+            "response": result_json,
+            "source_docs": [
+                {"content": clean_doc_contents[i], "source": doc_sources[i]} for i in range(len(clean_doc_contents))
+            ],
+            "emotion_analysis": {
+                "dominant_emotion": dominant_emotion,
+                "confidence": confidence,
+                "emotion_counts": dict(emotion_counts) if valid_emotions else {"neutral": 1}
+            }
+        }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "response": {
+                "response_code": "500", 
+                "content": f"An error occurred: {str(e)}", 
+                "module_reference": None, 
+                "related_transactions": [], 
+                "suggested_reports": [],
+                "detected_emotion": "unknown"
+            },
+            "source_docs": [],
+            "emotion_analysis": {
+                "error": str(e)
+            }
+        }), 500
+
+
+
+@app.before_request
+def cleanup_old_sessions():
+    try:
+        current_time = time.time()
+        sessions_to_remove = []
+        
+        for session_id, lock in emotion_locks.items():
+            if lock.acquire(blocking=False):
+                try:
+                    if session_id in emotion_frames and emotion_frames[session_id]:
+                        last_frame_time = max(frame['timestamp'] for frame in emotion_frames[session_id])
+                        
+                       
+                        if current_time - last_frame_time > 1800:  
+                            sessions_to_remove.append(session_id)
+                    else:
+                       
+                        sessions_to_remove.append(session_id)
+                finally:
+                    lock.release()
+        
+        for session_id in sessions_to_remove:
+            if session_id in emotion_frames:
+                del emotion_frames[session_id]
+            if session_id in emotion_locks:
+                del emotion_locks[session_id]
+    except Exception as e:
+        print(f"Error during session cleanup: {e}")
+    
+    
 if __name__ == "__main__":
     app.run(debug=True)
       
