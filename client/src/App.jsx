@@ -9,7 +9,6 @@ import Home from "../src/pages/Home";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import ChatPage from './pages/ChatPage';
 import CreateGroup from './pages/CreateGroup';
-import Profile  from "../src/pages/Profile";
 import Experts from './pages/Experts';
 import Notifications from './pages/Notifications';
 import AcceptForm from "./pages/AcceptForm";
@@ -26,7 +25,6 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/profile" element={<Profile />}/>
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/experts" element={<Experts />} />
           <Route path="/create-group" element={<CreateGroup />} />
