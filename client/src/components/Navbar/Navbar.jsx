@@ -3,15 +3,26 @@ import { Link, useLocation } from "react-router-dom"; // Import useLocation
 import { useTheme } from "../../context/Theme"; // Adjust the path as needed
 import { Sun, Moon } from "lucide-react";
 
+
+const user = JSON.parse(localStorage.getItem("currentUser"))
+
 const navItems = [
   { name: "Home", path: "/"},
   { name: "Profile", path: "/profile" },
-  { name: "Chat", path: "/chat" },
-  { name: "Video", path: "/videocall" },
-  { name: "ChatWithAI", path: "/chatAvatar" },
+  { name: "ChatWithAI", path: "/chat" },
 ];
 
+if (user.role == "Administrator"){
+  navItems.push({ name: "Knowledge Base", path: "knowledge-base" });
+}
+
 const Navbar = () => {
+  console.log(user);
+  
+  console.log(user.role);
+  
+  console.log(navItems);
+  
   const { theme, toggleTheme } = useTheme();
 
   const location = useLocation(); // Get the current route location

@@ -15,6 +15,7 @@ import AcceptForm from "./pages/AcceptForm";
 import ConfirmRequest from "./pages/ConfirmRequest";
 import VideoPage from "./pages/VideoPage";
 import ChattingAvatar from './pages/ChattingAvatar';
+import KnowledgeBase from './pages/KnowledgeBase';
 function App() {
 
 
@@ -26,14 +27,8 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/experts" element={<Experts />} />
-          <Route path="/create-group" element={<CreateGroup />} />
-          <Route path="/meet/request" element={<Notifications />} />
-          <Route path="/meet/accept/:meetingId" element={<AcceptForm />} />
-          <Route path="/confirm-request" element={<ConfirmRequest />} />
-          <Route path="/video/:meetingId" element={<VideoPage />} />
-          <Route path="/chatAvatar" element={<ChattingAvatar />} />
+          <Route path="/chat" element={<ChattingAvatar />} />
+          <Route path='/knowledge-base' element={<KnowledgeBase/>}/>
         </Routes>
         <Toaster position="bottom-right" richColors />
      </Router>

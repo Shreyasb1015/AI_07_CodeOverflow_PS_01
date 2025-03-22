@@ -10,6 +10,7 @@ import Navbar from "../components/Navbar/Navbar";
 import Footer from "../components/Footer/Footer";
 import { toast } from "sonner";
 import axiosClient from "../api/axios_client";
+import axios from "axios";
 
 const ChattingAvatar = () => {
   const { theme } = useTheme();
@@ -70,17 +71,25 @@ const ChattingAvatar = () => {
           type: "audio/wav",
         });
 
-        // Convert Blob to File (Required for API call)
         const audioFile = new File([audioBlob], "recording.mp3", {
           type: "audio/mp3",
         });
 
-        // Create FormData and append the file
         const formData = new FormData();
         formData.append("audio", audioFile);
 
+        const url = URL.createObjectURL(audioBlob);
+        setAudioURL(url);
+        setChatHistory((prev) => ({
+          ...prev,
+          [selectedModel]: [
+            ...prev[selectedModel],
+            { sender: "user", audio: url },
+          ],
+        }));
+
         try {
-          const response = await axiosClient.post("http://localhost:5000/upload-audio", {
+          const response = await axios.post("http://localhost:5000/upload-audio", {
             method: "POST",
             body: formData,
           });
