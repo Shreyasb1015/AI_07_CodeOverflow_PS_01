@@ -7,12 +7,11 @@ const ComplaintForm = ({ onSubmit }) => {
   const { theme } = useTheme(); // Get the current theme (light/dark)
   const [issueType, setIssueType] = useState("");
   const [description, setDescription] = useState("");
-  const [isSubmitted, setIsSubmitted] = useState(false); // State for submission success
+  const [isSubmitted, setIsSubmitted] = useState(false); 
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit(issueType, description); // Pass data to parent
-    setIsSubmitted(true); // Show success message
   };
 
   return (

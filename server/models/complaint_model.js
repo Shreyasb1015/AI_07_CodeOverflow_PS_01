@@ -7,11 +7,6 @@ const complaintSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    aiAvatarId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "AIAvatar",
-      required: true,
-    },
     issueType: {
       type: String,
       enum: ["Incorrect Response", "Rude Behavior", "Technical Issue", "Other"],

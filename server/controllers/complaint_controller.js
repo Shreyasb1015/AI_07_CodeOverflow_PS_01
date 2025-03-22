@@ -12,15 +12,16 @@ const checkAdmin = (req) => {
 
 export const createComplaint = asyncHandler(async (req, res) => {
   try {
-    const { userId, aiAvatarId, issueType, description } = req.body;
+    const { issueType, description } = req.body;
 
-    if (!userId || !aiAvatarId || !issueType || !description) {
+    const userId = req.user._id
+
+    if (!userId || !issueType || !description) {
       throw new ApiError(400, "All fields are required");
     }
 
     const complaint = await Complaint.create({
       userId,
-      aiAvatarId,
       issueType,
       description,
     });
