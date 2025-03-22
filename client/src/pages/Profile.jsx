@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar/Navbar";
 import beginnerBadge from "../assets/badges/beginner.png";
 import intermediateBadge from "../assets/badges/intermediate.png";
@@ -11,10 +11,28 @@ import InteractiveCircles from "../components/InteractiveCircles";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../redux/slice/Userslice"; // Adjust the path as needed
+import axiosClient from "../api/axios_client";
 
 const Profile = () => {
+  const [user, setUser] = useState(null);
 
-  
+  useEffect(() => {
+    async function getUser() {
+      try {
+        const response = await axiosClient.get("/user/me");
+        if (response.status === 200) {
+          console.log(response.data.user);
+
+          setUser(response.data.user);
+        }
+        console.log(user);
+      } catch (error) {
+        console.error("Error fetching user:", error);
+      }
+    }
+
+    getUser();
+  }, []);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -37,20 +55,10 @@ const Profile = () => {
     email: "gaurav@example.com",
   });
 
-  const [userLevel] = useState("pro");
-
-  const allBadges = [
-    { name: "Beginner", key: "beginner", image: beginnerBadge },
-    { name: "Intermediate", key: "intermediate", image: intermediateBadge },
-    { name: "Pro", key: "pro", image: proBadge },
-    { name: "Master", key: "master", image: masterBadge },
-    { name: "Legend", key: "legend", image: legendBadge },
-  ];
-
-  const getEarnedBadges = () => {
-    const levelIndex = allBadges.findIndex((badge) => badge.key === userLevel);
-    return allBadges.slice(0, levelIndex + 1);
-  };
+  if (user == null) return (
+  <div>
+    
+  </div>);
 
   return (
     <>
@@ -243,7 +251,10 @@ const Profile = () => {
               <button className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md w-40">
                 Update Profile
               </button>
-              <button className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md w-40" onClick={handleLogout}>
+              <button
+                className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md w-40"
+                onClick={handleLogout}
+              >
                 Logout
               </button>
             </div>
@@ -251,21 +262,7 @@ const Profile = () => {
 
           {/* Box 4 - Achievements */}
           <div className="div4 w-full">
-            <h2 className="text-xl font-semibold mb-4">Achievements</h2>
-            <div className="flex space-x-6 overflow-x-auto px-2 justify-center">
-              {getEarnedBadges().map((badge, index) => (
-                <div key={index} className="badge-container">
-                  <div className="badge-image-container">
-                    <img
-                      src={badge.image}
-                      alt={`${badge.name} Badge`}
-                      className="badge-image w-full h-full object-cover"
-                    />
-                  </div>
-                  <h4 className="mt-2 text-sm font-bold">{badge.name}</h4>
-                </div>
-              ))}
-            </div>
+            
           </div>
         </div>
       </div>
