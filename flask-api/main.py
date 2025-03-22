@@ -663,6 +663,7 @@ Please answer the user's query: "{user_input}"
 User's Emotional State: {dominant_emotion}
 Emotional Guidance: {emotion_guidance}
 
+Give the answer to user question while keeping in mind the user's emotional state.
 Use only the information provided above to answer the query, while adapting your tone to match the user's emotional state.
 If the information is not sufficient to provide a complete answer, please state what is known from the provided context 
 and indicate what information is missing.
@@ -763,6 +764,7 @@ HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/facebook/wav2
 HEADERS = {
     "Authorization": f"Bearer {os.getenv('HUGGINGFACE_TOKEN')}"
 }
+
 def transcribe_audio(audio_bytes):
     response = requests.post(HUGGINGFACE_API_URL, headers=HEADERS, data=audio_bytes)
     if response.status_code == 200:
