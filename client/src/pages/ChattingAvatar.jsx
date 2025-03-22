@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import axios from "axios";
 import { CHATAVATAR_URL, CHATIMAGE_URL, ANALYZEFRAME_URL } from "../api/flask_routes";
 import InfiniteMirror from "../components/InfiniteMirror/InfiniteMirror";
 
@@ -37,6 +38,7 @@ const ChattingAvatar = () => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const fileInputRef = useRef(null);
+  const [isEmotionDialogOpen, setIsEmotionDialogOpen] = useState(false);
 
   const avatarImages = {
     1: "/src/assets/avatar/avatar1.jpg",
@@ -121,10 +123,10 @@ const ChattingAvatar = () => {
     if (!file) return;
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("image", file);
 
     try {
-      const response = await axios.post("http://localhost:5000/upload-file", formData, {
+      const response = await axios.post(CHATIMAGE_URL, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
