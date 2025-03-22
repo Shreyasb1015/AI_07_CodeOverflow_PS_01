@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "../context/Theme";
-import { Mic, Paperclip, Camera, Send, AlertCircle } from "lucide-react";
+import { Mic, Paperclip, Camera, Send, AlertCircle, X } from "lucide-react";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar/Navbar";
 import Footer from "../components/Footer/Footer";
-import ComplaintForm from "../components/ComplaintForm/ComplaintForm"; // Import the ComplaintForm component
+import ComplaintForm from "../components/ComplaintForm/ComplaintForm";
 import { toast } from "sonner";
 import axiosClient from "../api/axios_client";
 import {
@@ -17,9 +17,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"; // Import Dialog components
-import { CHATAVATAR_URL } from "../api/flask_routes"; 
-
+} from "@/components/ui/dialog";
+import { CHATAVATAR_URL } from "../api/flask_routes";
+import InfiniteMirror from "../components/InfiniteMirror/InfiniteMirror"; // Import the InfiniteMirror component
 
 const ChattingAvatar = () => {
   const { theme } = useTheme();
@@ -30,7 +30,8 @@ const ChattingAvatar = () => {
     2: [],
     3: [],
   });
-const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false); // State for complaint dialog
+  const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false);
+  const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false); // State for camera dialog
   const [isRecording, setIsRecording] = useState(false);
   const [audioURL, setAudioURL] = useState(null);
   const mediaRecorderRef = useRef(null);
@@ -44,80 +45,80 @@ const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false); // St
 
   const handleSendMessage = async () => {
     if (message.trim() === "") return;
-    
+
     // Add user message to chat history
     setChatHistory((prev) => ({
       ...prev,
       [selectedModel]: [...prev[selectedModel], { sender: "user", text: message }],
     }));
-    
+
     // Store the message before clearing the input field
     const userMessage = message;
     setMessage("");
-    
+
     try {
       // Show loading state
       setChatHistory((prev) => ({
         ...prev,
         [selectedModel]: [...prev[selectedModel], { sender: "ai", text: "Thinking...", isLoading: true }],
       }));
-      
+
       // Send request to the chatbot API
-      const response = await axiosClient.post(CHATAVATAR_URL, { 
-        user_input: userMessage 
+      const response = await axiosClient.post(CHATAVATAR_URL, {
+        user_input: userMessage,
       });
-      
+
       // Remove the loading message
       setChatHistory((prev) => ({
         ...prev,
-        [selectedModel]: prev[selectedModel].filter(msg => !msg.isLoading),
+        [selectedModel]: prev[selectedModel].filter((msg) => !msg.isLoading),
       }));
-      
+
       // Add the API response to chat history
       if (response.data && response.data.response) {
-        // Access the content field from the response structure
         const responseContent = response.data.response.content || "Sorry, I couldn't process your request.";
-        
+
         setChatHistory((prev) => ({
           ...prev,
-          [selectedModel]: [...prev[selectedModel], { 
-            sender: "ai", 
-            text: responseContent,
-            // Optionally store other response data if needed
-            responseCode: response.data.response.response_code,
-            moduleReference: response.data.response.module_reference,
-            relatedTransactions: response.data.response.related_transactions,
-            suggestedReports: response.data.response.suggested_reports
-          }],
+          [selectedModel]: [
+            ...prev[selectedModel],
+            {
+              sender: "ai",
+              text: responseContent,
+              responseCode: response.data.response.response_code,
+              moduleReference: response.data.response.module_reference,
+              relatedTransactions: response.data.response.related_transactions,
+              suggestedReports: response.data.response.suggested_reports,
+            },
+          ],
         }));
       } else {
-        // Handle unexpected response format
         setChatHistory((prev) => ({
           ...prev,
-          [selectedModel]: [...prev[selectedModel], { 
-            sender: "ai", 
-            text: "Sorry, I received an invalid response format."
-          }],
+          [selectedModel]: [
+            ...prev[selectedModel],
+            { sender: "ai", text: "Sorry, I received an invalid response format." },
+          ],
         }));
       }
     } catch (error) {
       console.error("Error sending message to chatbot:", error);
-      
+
       // Remove any loading message
       setChatHistory((prev) => ({
         ...prev,
-        [selectedModel]: prev[selectedModel].filter(msg => !msg.isLoading),
+        [selectedModel]: prev[selectedModel].filter((msg) => !msg.isLoading),
       }));
-      
+
       // Add error message to chat history
       setChatHistory((prev) => ({
         ...prev,
-        [selectedModel]: [...prev[selectedModel], { 
-          sender: "ai", 
-          text: "Sorry, I encountered an error while processing your request. Please try again."
-        }],
+        [selectedModel]: [
+          ...prev[selectedModel],
+          { sender: "ai", text: "Sorry, I encountered an error while processing your request. Please try again." },
+        ],
       }));
-      
+
       // Show error toast
       toast.error("Failed to get response from the chatbot.");
     }
@@ -173,7 +174,7 @@ const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false); // St
           if (!response.ok) throw new Error("Failed to upload audio");
 
           const data = await response.json();
-          const audioURL = data.audioUrl; 
+          const audioURL = data.audioUrl;
 
           setChatHistory((prev) => ({
             ...prev,
@@ -199,24 +200,23 @@ const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false); // St
     }
   };
 
-
   const handlePlayAudio = (url) => {
     const audio = new Audio(url);
     audio.play();
   };
 
-  // Handle complaint submission
   const handleComplaintSubmit = async (issueType, description) => {
     try {
-      const response = await axiosClient.post("/complaint",{
-        issueType,description
-      })
-      if(response.data.success == true){
-        toast.success("Complaint filed successfully")
-        setIsComplaintDialogOpen(false)
+      const response = await axiosClient.post("/complaint", {
+        issueType,
+        description,
+      });
+      if (response.data.success === true) {
+        toast.success("Complaint filed successfully");
+        setIsComplaintDialogOpen(false);
       }
     } catch (error) {
-      toast.error("Error complaining.")
+      toast.error("Error complaining.");
     }
   };
 
@@ -281,7 +281,7 @@ const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false); // St
           </div>
         </div>
         <div className="w-full md:w-3/4 flex flex-col gap-6 h-[calc(100vh-100px)]">
-        <ScrollArea className="flex-1 p-4 rounded-lg border bg-background overflow-y-auto">
+          <ScrollArea className="flex-1 p-4 rounded-lg border bg-background overflow-y-auto">
             <div className="flex flex-col">
               {chatHistory[selectedModel].map((chat, index) => (
                 <motion.div
@@ -320,12 +320,22 @@ const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false); // St
             </div>
           </ScrollArea>
           <div className="flex gap-4 p-4 border-t">
-            <Button variant="outline" >
+            <Button variant="outline">
               <Paperclip className="h-5 w-5" />
             </Button>
-            <Button variant="outline" >
-              <Camera className="h-5 w-5" />
-            </Button>
+            <Dialog open={isCameraDialogOpen} onOpenChange={setIsCameraDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Camera className="h-5 w-5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="w-full max-w-4xl h-[80vh]">
+                <DialogHeader>
+                  <DialogTitle>Infinite Mirror</DialogTitle>
+                </DialogHeader>
+                <InfiniteMirror onClose={() => setIsCameraDialogOpen(false)} />
+              </DialogContent>
+            </Dialog>
             <Button
               variant="outline"
               onClick={handleVoiceInput}
