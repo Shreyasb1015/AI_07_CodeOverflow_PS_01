@@ -35,7 +35,7 @@ export default function KnowledgeBase() {
     }
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("pdf", file);
 
     try {
       const response = await axios.post(

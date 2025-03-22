@@ -19,8 +19,7 @@ if (user?.role == "Administrator"){
 const Navbar = () => {
   console.log(user);
   
-  console.log(user.role);
-  
+ 
   console.log(navItems);
   
   const { theme, toggleTheme } = useTheme();
