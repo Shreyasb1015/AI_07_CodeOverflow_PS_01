@@ -4,12 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "../context/Theme";
-import { Mic, Paperclip, Camera, Send, AlertCircle, X } from "lucide-react";
+import {
+  Mic,
+  Paperclip,
+  Camera,
+  Send,
+  AlertCircle,
+  X,
+  StopCircle,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar/Navbar";
 import Footer from "../components/Footer/Footer";
 import ComplaintForm from "../components/ComplaintForm/ComplaintForm";
 import { toast } from "sonner";
+import axios from "axios";
 import axiosClient from "../api/axios_client";
 import {
   Dialog,
@@ -18,8 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import axios from "axios";
-import { CHATAVATAR_URL, CHATIMAGE_URL, ANALYZEFRAME_URL } from "../api/flask_routes";
+import { CHATAVATAR_URL } from "../api/flask_routes";
 import InfiniteMirror from "../components/InfiniteMirror/InfiniteMirror";
 
 const ChattingAvatar = () => {
@@ -51,7 +59,10 @@ const ChattingAvatar = () => {
 
     setChatHistory((prev) => ({
       ...prev,
-      [selectedModel]: [...prev[selectedModel], { sender: "user", text: message }],
+      [selectedModel]: [
+        ...prev[selectedModel],
+        { sender: "user", text: message },
+      ],
     }));
 
     const userMessage = message;
@@ -60,20 +71,26 @@ const ChattingAvatar = () => {
     try {
       setChatHistory((prev) => ({
         ...prev,
-        [selectedModel]: [...prev[selectedModel], { sender: "ai", text: "Thinking...", isLoading: true }],
+        [selectedModel]: [
+          ...prev[selectedModel],
+          { sender: "ai", text: "Thinking...", isLoading: true },
+        ],
       }));
 
       const response = await axiosClient.post(CHATAVATAR_URL, {
         user_input: userMessage,
       });
 
+      // Remove the temporary "Thinking..." message
       setChatHistory((prev) => ({
         ...prev,
         [selectedModel]: prev[selectedModel].filter((msg) => !msg.isLoading),
       }));
 
       if (response.data && response.data.response) {
-        const responseContent = response.data.response.content || "Sorry, I couldn't process your request.";
+        const responseContent =
+          response.data.response.content ||
+          "Sorry, I couldn't process your request.";
 
         setChatHistory((prev) => ({
           ...prev,
@@ -94,7 +111,10 @@ const ChattingAvatar = () => {
           ...prev,
           [selectedModel]: [
             ...prev[selectedModel],
-            { sender: "ai", text: "Sorry, I received an invalid response format." },
+            {
+              sender: "ai",
+              text: "Sorry, I received an invalid response format.",
+            },
           ],
         }));
       }
@@ -110,7 +130,10 @@ const ChattingAvatar = () => {
         ...prev,
         [selectedModel]: [
           ...prev[selectedModel],
-          { sender: "ai", text: "Sorry, I encountered an error while processing your request. Please try again." },
+          {
+            sender: "ai",
+            text: "Sorry, I encountered an error while processing your request. Please try again.",
+          },
         ],
       }));
 
@@ -122,27 +145,64 @@ const ChattingAvatar = () => {
     const file = event.target.files[0];
     if (!file) return;
 
+  
+    const previewURL = URL.createObjectURL(file);
+    const tempMessage = {
+      sender: "user",
+      file: previewURL,
+      type: file.type.startsWith("image") ? "image" : "video",
+      uploading: true,
+    };
+
+    setChatHistory((prev) => ({
+      ...prev,
+      [selectedModel]: [...prev[selectedModel], tempMessage],
+    }));
+
     const formData = new FormData();
     formData.append("image", file);
 
     try {
-      const response = await axios.post(CHATIMAGE_URL, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post(
+        "http://localhost:5000/image-chat",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      if (response.data && response.data.response) {
+        const responseContent =
+          response.data.response.content ||
+          "Sorry, I couldn't process your request.";
 
-      if (!response.data.success) throw new Error("Failed to upload file");
-
-      const fileURL = response.data.fileUrl;
-
-      setChatHistory((prev) => ({
-        ...prev,
-        [selectedModel]: [
-          ...prev[selectedModel],
-          { sender: "user", file: fileURL, type: file.type.startsWith("image") ? "image" : "video" },
-        ],
-      }));
+        setChatHistory((prev) => ({
+          ...prev,
+          [selectedModel]: [
+            ...prev[selectedModel],
+            {
+              sender: "ai",
+              text: responseContent,
+              responseCode: response.data.response.response_code,
+              moduleReference: response.data.response.module_reference,
+              relatedTransactions: response.data.response.related_transactions,
+              suggestedReports: response.data.response.suggested_reports,
+            },
+          ],
+        }));
+      } else {
+        setChatHistory((prev) => ({
+          ...prev,
+          [selectedModel]: [
+            ...prev[selectedModel],
+            {
+              sender: "ai",
+              text: "Sorry, I received an invalid response format.",
+            },
+          ],
+        }));
+      }
 
       toast.success("File uploaded successfully!");
     } catch (error) {
@@ -193,21 +253,25 @@ const ChattingAvatar = () => {
         }));
 
         try {
-          const response = await axios.post("http://localhost:5000/upload-audio", {
-            method: "POST",
-            body: formData,
-          });
+          const response = await axios.post(
+            "http://localhost:5000/upload-audio",
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
 
-          if (!response.ok) throw new Error("Failed to upload audio");
+          if (!response.data.success) throw new Error("Failed to upload audio");
 
-          const data = await response.json();
-          const audioURL = data.audioUrl;
+          const audioURLFromServer = response.data.audioUrl;
 
           setChatHistory((prev) => ({
             ...prev,
             [selectedModel]: [
               ...prev[selectedModel],
-              { sender: "user", audio: audioURL },
+              { sender: "user", audio: audioURLFromServer },
             ],
           }));
 
@@ -290,7 +354,10 @@ const ChattingAvatar = () => {
               Neo
             </Button>
 
-            <Dialog open={isComplaintDialogOpen} onOpenChange={setIsComplaintDialogOpen}>
+            <Dialog
+              open={isComplaintDialogOpen}
+              onOpenChange={setIsComplaintDialogOpen}
+            >
               <DialogTrigger asChild>
                 <Button variant="destructive" className="w-full">
                   <AlertCircle className="h-5 w-5 mr-2" />
@@ -335,7 +402,7 @@ const ChattingAvatar = () => {
                       variant="outline"
                       onClick={() => handlePlayAudio(chat.audio)}
                     >
-                      <Play className="h-5 w-5" /> Play Audio
+                      <Send className="h-5 w-5" /> Play Audio
                     </Button>
                   )}
                   {chat.file && chat.type === "image" && (
@@ -360,17 +427,23 @@ const ChattingAvatar = () => {
             </div>
           </ScrollArea>
           <div className="flex gap-4 p-4 border-t">
-            <Button variant="outline" onClick={() => fileInputRef.current.click()}>
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current.click()}
+            >
               <Paperclip className="h-5 w-5" />
             </Button>
             <input
               type="file"
               ref={fileInputRef}
-              style={{ display: 'none' }}
+              style={{ display: "none" }}
               onChange={handleFileUpload}
               accept="image/*, video/*"
             />
-            <Dialog open={isCameraDialogOpen} onOpenChange={setIsCameraDialogOpen}>
+            <Dialog
+              open={isCameraDialogOpen}
+              onOpenChange={setIsCameraDialogOpen}
+            >
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <Camera className="h-5 w-5" />
