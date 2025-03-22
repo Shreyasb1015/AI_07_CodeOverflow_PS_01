@@ -164,11 +164,11 @@ def chatting():
         return jsonify({"response": "Please provide user input"})
     
     try:
-        # First fetch relevant documents from the knowledge base
+
         docs = fetch_from_knowledge_base(user_input)
         
         if not docs or len(docs) == 0:
-            # If no relevant documents are found, just use the regular model
+           
             model = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash",
                 api_key=SecretStr(GOOGLE_GEMINI_API_KEY) if GOOGLE_GEMINI_API_KEY else None
@@ -176,7 +176,7 @@ def chatting():
             full_prompt = f"{MY_PROMPT}\n\nUser Query: {user_input}\n\nProvide a response in the JSON format specified above."
             result = model.invoke(full_prompt).content
             cleaned_result = clean_text_content(str(result))
-            # Attempt to parse result as JSON; otherwise, wrap it in our response format.
+            
             try:
                 parsed_result = json.loads(cleaned_result)
             except Exception:
@@ -189,11 +189,10 @@ def chatting():
                 }
             return jsonify({"response": parsed_result, "source_docs": []})
         
-        # Extract the content from the documents and clean them
         doc_contents = [clean_text_content(doc.page_content) for doc in docs]
         doc_sources = [doc.metadata.get('source', 'Unknown') if doc.metadata else 'Unknown' for doc in docs]
         
-        # Format document contents for better readability in the prompt
+       
         formatted_docs = '\n\n'.join(doc_contents)
         
         enhanced_prompt = f"""
@@ -227,7 +226,7 @@ what information is missing.
                 "suggested_reports": []
             }
             
-        # Clean the source document contents for display
+        
         clean_doc_contents = [clean_text_content(doc.page_content) for doc in docs]
         
         response_data = {
@@ -245,9 +244,12 @@ what information is missing.
 
 def clean_text_content(text):
     cleaned = text.replace('\\n', ' ').replace('\\t', ' ')
-    leaned = re.sub(r'\*\*|\*', '', cleaned)
+    cleaned = re.sub(r'\*\*|\*', '', cleaned)
     cleaned = re.sub(r'\s+', ' ', cleaned)
     cleaned = re.sub(r'(?<!\\)"', '\\"', cleaned) 
+    cleaned = cleaned.replace('\\*', '•')
+    cleaned = cleaned.replace('\\r', ' ')
+    cleaned = re.sub(r'\\([^"\\])', r'\1', cleaned)
     return cleaned.strip()
 
 if __name__ == "__main__":

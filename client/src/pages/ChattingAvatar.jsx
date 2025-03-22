@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"; // Import Dialog components
+import { CHATAVATAR_URL } from "../api/flask_routes"; 
 
 
 const ChattingAvatar = () => {
@@ -41,19 +42,85 @@ const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false); // St
     3: "/src/assets/avatar/avatar3.jpg",
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (message.trim() === "") return;
+    
+    // Add user message to chat history
     setChatHistory((prev) => ({
       ...prev,
       [selectedModel]: [...prev[selectedModel], { sender: "user", text: message }],
     }));
-    setTimeout(() => {
+    
+    // Store the message before clearing the input field
+    const userMessage = message;
+    setMessage("");
+    
+    try {
+      // Show loading state
       setChatHistory((prev) => ({
         ...prev,
-        [selectedModel]: [...prev[selectedModel], { sender: "ai", text: `This is a response from Model ${selectedModel}.` }],
+        [selectedModel]: [...prev[selectedModel], { sender: "ai", text: "Thinking...", isLoading: true }],
       }));
-    }, 1000);
-    setMessage("");
+      
+      // Send request to the chatbot API
+      const response = await axiosClient.post(CHATAVATAR_URL, { 
+        user_input: userMessage 
+      });
+      
+      // Remove the loading message
+      setChatHistory((prev) => ({
+        ...prev,
+        [selectedModel]: prev[selectedModel].filter(msg => !msg.isLoading),
+      }));
+      
+      // Add the API response to chat history
+      if (response.data && response.data.response) {
+        // Access the content field from the response structure
+        const responseContent = response.data.response.content || "Sorry, I couldn't process your request.";
+        
+        setChatHistory((prev) => ({
+          ...prev,
+          [selectedModel]: [...prev[selectedModel], { 
+            sender: "ai", 
+            text: responseContent,
+            // Optionally store other response data if needed
+            responseCode: response.data.response.response_code,
+            moduleReference: response.data.response.module_reference,
+            relatedTransactions: response.data.response.related_transactions,
+            suggestedReports: response.data.response.suggested_reports
+          }],
+        }));
+      } else {
+        // Handle unexpected response format
+        setChatHistory((prev) => ({
+          ...prev,
+          [selectedModel]: [...prev[selectedModel], { 
+            sender: "ai", 
+            text: "Sorry, I received an invalid response format."
+          }],
+        }));
+      }
+    } catch (error) {
+      console.error("Error sending message to chatbot:", error);
+      
+      // Remove any loading message
+      setChatHistory((prev) => ({
+        ...prev,
+        [selectedModel]: prev[selectedModel].filter(msg => !msg.isLoading),
+      }));
+      
+      // Add error message to chat history
+      setChatHistory((prev) => ({
+        ...prev,
+        [selectedModel]: [...prev[selectedModel], { 
+          sender: "ai", 
+          text: "Sorry, I encountered an error while processing your request. Please try again."
+        }],
+      }));
+      
+      // Show error toast
+      toast.error("Failed to get response from the chatbot.");
+    }
   };
 
   const handleVoiceInput = async () => {
@@ -205,54 +272,46 @@ const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false); // St
                 <ComplaintForm onSubmit={handleComplaintSubmit} />
               </DialogContent>
             </Dialog>
-            {[1, 2, 3].map((model) => (
-              <Button
-                key={model}
-                variant={selectedModel === model ? "default" : "outline"}
-                onClick={() => setSelectedModel(model)}
-                className="w-full"
-              >
-                {model === 1 ? "Aether" : model === 2 ? "Nova" : "Neo"}
-              </Button>
-            ))}
           </div>
         </div>
         <div className="w-full md:w-3/4 flex flex-col gap-6 h-[calc(100vh-100px)]">
-          <ScrollArea className="flex-1 p-4 rounded-lg border bg-background">
-            {chatHistory[selectedModel].map((chat, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-                className={`flex flex-col gap-2 mb-4 ${
-                  chat.sender === "user" ? "items-end" : "items-start"
-                }`}
-              >
-                {chat.text && (
-                  <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
-                      chat.sender === "user"
-                        ? "bg-orange-500 text-white"
-                        : "bg-gray-200 text-gray-900"
-                    }`}
-                  >
-                    {chat.text}
-                  </div>
-                )}
-                {chat.audio && (
-                  <Button
-                    variant="outline"
-                    onClick={() => handlePlayAudio(chat.audio)}
-                  >
-                    <Play className="h-5 w-5" /> Play Audio
-                  </Button>
-                )}
-                <span className="text-sm text-muted-foreground">
-                  {chat.sender === "user" ? "You" : `Model ${selectedModel}`}
-                </span>
-              </motion.div>
-            ))}
+        <ScrollArea className="flex-1 p-4 rounded-lg border bg-background overflow-y-auto">
+            <div className="flex flex-col">
+              {chatHistory[selectedModel].map((chat, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  className={`flex flex-col gap-2 mb-4 ${
+                    chat.sender === "user" ? "items-end" : "items-start"
+                  }`}
+                >
+                  {chat.text && (
+                    <div
+                      className={`max-w-[80%] p-3 rounded-lg ${
+                        chat.sender === "user"
+                          ? "bg-orange-500 text-white"
+                          : "bg-gray-200 text-gray-900"
+                      }`}
+                    >
+                      {chat.text}
+                    </div>
+                  )}
+                  {chat.audio && (
+                    <Button
+                      variant="outline"
+                      onClick={() => handlePlayAudio(chat.audio)}
+                    >
+                      <Play className="h-5 w-5" /> Play Audio
+                    </Button>
+                  )}
+                  <span className="text-sm text-muted-foreground">
+                    {chat.sender === "user" ? "You" : `Model ${selectedModel}`}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
           </ScrollArea>
           <div className="flex gap-4 p-4 border-t">
             <Button variant="outline" >
