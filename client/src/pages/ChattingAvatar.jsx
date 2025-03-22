@@ -139,12 +139,18 @@ const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false); // St
   };
 
   // Handle complaint submission
-  const handleComplaintSubmit = (issueType, description) => {
-    console.log("Complaint Submitted:", { issueType, description });
-    // Close the dialog after 2 seconds
-    setTimeout(() => {
-      setIsComplaintDialogOpen(false);
-    }, 2000);
+  const handleComplaintSubmit = async (issueType, description) => {
+    try {
+      const response = await axiosClient.post("/complaint",{
+        issueType,description
+      })
+      if(response.data.success == true){
+        toast.success("Complaint filed successfully")
+        setIsComplaintDialogOpen(false)
+      }
+    } catch (error) {
+      toast.error("Error complaining.")
+    }
   };
 
   return (
