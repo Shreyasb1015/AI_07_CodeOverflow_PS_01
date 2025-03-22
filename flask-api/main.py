@@ -8,12 +8,14 @@ from pydantic import SecretStr
 from PIL import Image
 import pytesseract
 import io
-import chromadb
-from chromadb.config import Settings
+# import chromadb
+# from chromadb.config import Settings
 import shutil
 from create_knoweldge_base import create_knowledge_base_fn
 from fetch_from_knoweldge_base import fetch_from_knowledge_base
 import json
+import requests
+import time
 
 
 app = Flask(__name__)
@@ -164,11 +166,11 @@ def chatting():
         return jsonify({"response": "Please provide user input"})
     
     try:
-
+        # First fetch relevant documents from the knowledge base
         docs = fetch_from_knowledge_base(user_input)
         
         if not docs or len(docs) == 0:
-           
+            # If no relevant documents are found, just use the regular model
             model = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash",
                 api_key=SecretStr(GOOGLE_GEMINI_API_KEY) if GOOGLE_GEMINI_API_KEY else None
@@ -176,7 +178,7 @@ def chatting():
             full_prompt = f"{MY_PROMPT}\n\nUser Query: {user_input}\n\nProvide a response in the JSON format specified above."
             result = model.invoke(full_prompt).content
             cleaned_result = clean_text_content(str(result))
-            
+            # Attempt to parse result as JSON; otherwise, wrap it in our response format.
             try:
                 parsed_result = json.loads(cleaned_result)
             except Exception:
@@ -189,10 +191,11 @@ def chatting():
                 }
             return jsonify({"response": parsed_result, "source_docs": []})
         
+        # Extract the content from the documents and clean them
         doc_contents = [clean_text_content(doc.page_content) for doc in docs]
         doc_sources = [doc.metadata.get('source', 'Unknown') if doc.metadata else 'Unknown' for doc in docs]
         
-       
+        # Format document contents for better readability in the prompt
         formatted_docs = '\n\n'.join(doc_contents)
         
         enhanced_prompt = f"""
@@ -226,7 +229,7 @@ what information is missing.
                 "suggested_reports": []
             }
             
-        
+        # Clean the source document contents for display
         clean_doc_contents = [clean_text_content(doc.page_content) for doc in docs]
         
         response_data = {
@@ -244,15 +247,79 @@ what information is missing.
 
 def clean_text_content(text):
     cleaned = text.replace('\\n', ' ').replace('\\t', ' ')
-    cleaned = re.sub(r'\*\*|\*', '', cleaned)
+    leaned = re.sub(r'\*\*|\*', '', cleaned)
     cleaned = re.sub(r'\s+', ' ', cleaned)
     cleaned = re.sub(r'(?<!\\)"', '\\"', cleaned) 
-    cleaned = cleaned.replace('\\*', '•')
-    cleaned = cleaned.replace('\\r', ' ')
-    cleaned = re.sub(r'\\([^"\\])', r'\1', cleaned)
     return cleaned.strip()
+
+
+#bolne lagi
+# Load API key from environment
+DID_API_KEY = os.getenv("MYYMYY")
+
+# Common headers
+headers = {
+    "Authorization": f"Basic {DID_API_KEY}",
+    "Content-Type": "application/json"
+}
+
+@app.route('/generate-video', methods=['POST'])
+def generate_and_fetch_video():
+    try:
+        # Input from client
+        data = request.json
+        input_text = data.get('text', """
+Hey!
+Great to meet you — I’m your assistant, here to help you turn your ideas into reality.
+Whether it’s building a cool project, figuring out a pipeline, or just exploring new tech, I’ve got your back.
+So, what are we working on today?
+""")
+        source_url = data.get("source_url", "https://cdn.getmerlin.in/cms/img_AQO_Pe_Pie_STC_59p_Oy_Zo8mbm7d_5a6a9d88fe.png")
+
+        # Step 1: POST - initiate video generation
+        payload = {
+            "source_url": source_url,
+            "script": {
+                "type": "text",
+                "input": input_text
+            }
+        }
+
+        post_response = requests.post("https://api.d-id.com/talks", headers=headers, json=payload)
+
+        if post_response.status_code != 201:
+            return jsonify({"error": "Failed to start video generation", "details": post_response.text}), post_response.status_code
+
+        talk_id = post_response.json().get("id")
+
+        # Step 2: Keep polling GET until status is done
+        get_url = f"https://api.d-id.com/talks/{talk_id}"
+
+        for _ in range(30):  # max 30 attempts = ~60 seconds dont delete this comment, can change max time later!
+            get_response = requests.get(get_url, headers=headers)
+            if get_response.status_code == 200:
+                result = get_response.json()
+                status = result.get("status")
+                if status == "done":
+                    video_url = result.get("result_url")
+                    return jsonify({
+                        "message": "✅ Video generated successfully!",
+                        "video_url": video_url,
+                        "talk_id": talk_id
+                    })
+                elif status == "error":
+                    return jsonify({"error": "❌ Video generation failed"}), 500
+                else:
+                    time.sleep(2)  # wait before next poll
+            else:
+                return jsonify({"error": "⚠️ Failed to check video status", "details": get_response.text}), get_response.status_code
+
+        return jsonify({"error": "⏳ Timeout: Video generation took too long"}), 504
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True)
-    
-    
+      
