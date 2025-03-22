@@ -4,10 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "../context/Theme";
-import { Mic, Paperclip, Camera, Send } from "lucide-react";
+import { Mic, Paperclip, Camera, Send, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar/Navbar";
 import Footer from "../components/Footer/Footer";
+import ComplaintForm from "../components/ComplaintForm/ComplaintForm"; // Import the ComplaintForm component
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"; // Import Dialog components
 
 const ChattingAvatar = () => {
   const { theme } = useTheme(); // Get the current theme (light/dark)
@@ -18,6 +26,7 @@ const ChattingAvatar = () => {
     2: [], // Chat history for Model 2
     3: [], // Chat history for Model 3
   });
+  const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false); // State for complaint dialog
 
   // Avatar images for each model
   const avatarImages = {
@@ -93,6 +102,15 @@ const ChattingAvatar = () => {
     alert("Camera input is not implemented yet.");
   };
 
+  // Handle complaint submission
+  const handleComplaintSubmit = (issueType, description) => {
+    console.log("Complaint Submitted:", { issueType, description });
+    // Close the dialog after 2 seconds
+    setTimeout(() => {
+      setIsComplaintDialogOpen(false);
+    }, 2000);
+  };
+
   return (
     <div
       className={`min-h-screen flex flex-col ${
@@ -138,8 +156,24 @@ const ChattingAvatar = () => {
               onClick={() => setSelectedModel(3)}
               className="w-full"
             >
-              Neo              
+              Neo
             </Button>
+
+            {/* Complaint Button */}
+            <Dialog open={isComplaintDialogOpen} onOpenChange={setIsComplaintDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="destructive" className="w-full">
+                  <AlertCircle className="h-5 w-5 mr-2" />
+                  File a Complaint
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>File a Complaint</DialogTitle>
+                </DialogHeader>
+                <ComplaintForm onSubmit={handleComplaintSubmit} />
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
