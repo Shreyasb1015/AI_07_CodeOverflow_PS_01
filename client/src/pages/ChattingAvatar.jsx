@@ -4,13 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "../context/Theme";
-import { Mic, Paperclip, Camera, Send, StopCircle, Play } from "lucide-react";
+import { Mic, Paperclip, Camera, Send, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar/Navbar";
 import Footer from "../components/Footer/Footer";
+import ComplaintForm from "../components/ComplaintForm/ComplaintForm"; // Import the ComplaintForm component
 import { toast } from "sonner";
 import axiosClient from "../api/axios_client";
-import axios from "axios";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"; // Import Dialog components
+
 
 const ChattingAvatar = () => {
   const { theme } = useTheme();
@@ -21,6 +29,7 @@ const ChattingAvatar = () => {
     2: [],
     3: [],
   });
+const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false); // State for complaint dialog
   const [isRecording, setIsRecording] = useState(false);
   const [audioURL, setAudioURL] = useState(null);
   const mediaRecorderRef = useRef(null);
@@ -129,6 +138,15 @@ const ChattingAvatar = () => {
     audio.play();
   };
 
+  // Handle complaint submission
+  const handleComplaintSubmit = (issueType, description) => {
+    console.log("Complaint Submitted:", { issueType, description });
+    // Close the dialog after 2 seconds
+    setTimeout(() => {
+      setIsComplaintDialogOpen(false);
+    }, 2000);
+  };
+
   return (
     <div
       className={`min-h-screen flex flex-col ${
@@ -150,6 +168,43 @@ const ChattingAvatar = () => {
             </Avatar>
           </motion.div>
           <div className="flex flex-col gap-4 w-full">
+            <Button
+              variant={selectedModel === 1 ? "default" : "outline"}
+              onClick={() => setSelectedModel(1)}
+              className="w-full"
+            >
+              Aether
+            </Button>
+            <Button
+              variant={selectedModel === 2 ? "default" : "outline"}
+              onClick={() => setSelectedModel(2)}
+              className="w-full"
+            >
+              Nova
+            </Button>
+            <Button
+              variant={selectedModel === 3 ? "default" : "outline"}
+              onClick={() => setSelectedModel(3)}
+              className="w-full"
+            >
+              Neo
+            </Button>
+
+            {/* Complaint Button */}
+            <Dialog open={isComplaintDialogOpen} onOpenChange={setIsComplaintDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="destructive" className="w-full">
+                  <AlertCircle className="h-5 w-5 mr-2" />
+                  File a Complaint
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>File a Complaint</DialogTitle>
+                </DialogHeader>
+                <ComplaintForm onSubmit={handleComplaintSubmit} />
+              </DialogContent>
+            </Dialog>
             {[1, 2, 3].map((model) => (
               <Button
                 key={model}

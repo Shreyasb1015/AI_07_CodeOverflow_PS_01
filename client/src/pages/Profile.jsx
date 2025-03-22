@@ -9,7 +9,6 @@ import legendBadge from "../assets/badges/legend.png";
 import { useTheme } from "../context/Theme";
 import { Edit, Save, Upload, X } from "lucide-react";
 import GoogleTranslate from "../components/GoogleTranslate";
-import InteractiveCircles from "../components/InteractiveCircles";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../redux/slice/Userslice";
@@ -23,9 +22,6 @@ const Profile = () => {
   const [bio, setBio] = useState("");
   const [department, setDepartment] = useState("");
   const [profilePic, setProfilePic] = useState("");
-  const [isPasswordEditing, setIsPasswordEditing] = useState(false); // State for password editing
-  const [currentPassword, setCurrentPassword] = useState(""); // Current password input
-  const [newPassword, setNewPassword] = useState(""); // New password input
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -79,24 +75,6 @@ const Profile = () => {
         setProfilePic(reader.result);
       };
       reader.readAsDataURL(file);
-    }
-  };
-
-  const handleChangePassword = async () => {
-    try {
-      const response = await axiosClient.put("/user/change-password", {
-        currentPassword,
-        newPassword,
-      });
-      if (response.status === 200) {
-        alert("Password changed successfully!");
-        setIsPasswordEditing(false); // Disable password editing after saving
-        setCurrentPassword(""); // Clear inputs
-        setNewPassword("");
-      }
-    } catch (error) {
-      console.error("Error changing password:", error);
-      alert("Failed to change password. Please check your current password.");
     }
   };
 
@@ -234,34 +212,6 @@ const Profile = () => {
             from { transform: perspective(500px) rotateY(0deg); }
             to { transform: perspective(500px) rotateY(360deg); }
           }
-
-          .change-password-section {
-            background: antiquewhite;
-            color: black;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-top: 1rem;
-            width: 100%;
-          }
-
-          .change-password-section input {
-            background: white;
-            color: black;
-            border: 1px solid #ccc;
-            border-radius: 0.25rem;
-            padding: 0.5rem;
-            margin-bottom: 0.5rem;
-            width: 100%;
-          }
-
-          .change-password-section button {
-            background: blue;
-            color: white;
-            border: none;
-            border-radius: 0.25rem;
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-          }
         `}</style>
 
         <div className="parent">
@@ -315,33 +265,7 @@ const Profile = () => {
           <div className="div2 w-80">
             <div className="w-full flex flex-col items-center gap-3">
               <h2 className="text-xl font-semibold mb-2">Settings</h2>
-              <InteractiveCircles />
               <GoogleTranslate />
-              {/* Change Password Section */}
-              <div className="change-password-section">
-                <h3 className="text-lg font-semibold mb-2">Change Password</h3>
-                {isPasswordEditing ? (
-                  <>
-                    <input
-                      type="password"
-                      placeholder="Current Password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                    />
-                    <input
-                      type="password"
-                      placeholder="New Password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                    />
-                    <button onClick={handleChangePassword}>Save Password</button>
-                  </>
-                ) : (
-                  <button onClick={() => setIsPasswordEditing(true)}>
-                    Change Password
-                  </button>
-                )}
-              </div>
             </div>
           </div>
 
