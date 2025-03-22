@@ -125,61 +125,59 @@ const Login = () => {
         </div>
       </div>
       <div
-        className="w-1/2 flex flex-col justify-center p-8"
-        style={{ backgroundColor: "var(--orange-color)" }}
+  className="w-1/2 flex flex-col justify-center p-8"
+  style={{ backgroundColor: "var(--orange-color)" }}
+>
+  <div className="max-w-md mx-auto">
+    <h1
+      className="text-4xl font-bold mb-4"
+      style={{ color: "var(--white-color)" }}
+    >
+      Your ERP, Simplified
+    </h1>
+    <p className="text-base mb-4" style={{ color: "var(--white-color)" }}>
+      Step into the future of enterprise resource planning with AvaERP. From GST compliance to production workflows, experience seamless, AI-driven support that feels like talking to an expert.
+    </p>
+    <div className="flex items-center mt-4">
+      <p
+        className="text-base font-semibold mr-4"
+        style={{ color: "var(--white-color)" }}
       >
-        <div className="max-w-md mx-auto">
-          <h1
-            className="text-4xl font-bold mb-4"
-            style={{ color: "var(--white-color)" }}
-          >
-            Explore the world’s leading design portfolios.
-          </h1>
-          <p className="text-base mb-4" style={{ color: "var(--white-color)" }}>
-            Millions of designers and agencies around the world showcase their
-            portfolio work on Flowbite – the home to the world’s best design and
-            creative professionals.
-          </p>
-          <div className="flex items-center mt-4">
-            <p
-              className="text-base font-semibold mr-4"
-              style={{ color: "var(--white-color)" }}
-            >
-              Over 15.7k Happy Customers
-            </p>
-            <div className="flex -space-x-4">
-              <Avatar className="relative z-30 border-2 border-white">
-                <AvatarImage
-                  src="https://images.unsplash.com/photo-1552058544-f2b08422138a"
-                  alt="@avatar1"
-                />
-                <AvatarFallback>AB</AvatarFallback>
-              </Avatar>
-              <Avatar className="relative z-20 border-2 border-white">
-                <AvatarImage
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb"
-                  alt="@avatar2"
-                />
-                <AvatarFallback>CD</AvatarFallback>
-              </Avatar>
-              <Avatar className="relative z-10 border-2 border-white">
-                <AvatarImage
-                  src="https://images.unsplash.com/photo-1511367461989-f85a21fda167"
-                  alt="@avatar3"
-                />
-                <AvatarFallback>EF</AvatarFallback>
-              </Avatar>
-              <Avatar className="relative z-0 border-2 border-white">
-                <AvatarImage
-                  src="https://images.unsplash.com/photo-1517841905240-472988babdf9"
-                  alt="@avatar4"
-                />
-                <AvatarFallback>GH</AvatarFallback>
-              </Avatar>
-            </div>
-          </div>
-        </div>
+        Many Happy Customers
+      </p>
+      <div className="flex -space-x-4">
+        <Avatar className="relative z-30 border-2 border-white">
+          <AvatarImage
+            src="https://images.unsplash.com/photo-1552058544-f2b08422138a"
+            alt="@avatar1"
+          />
+          <AvatarFallback>AB</AvatarFallback>
+        </Avatar>
+        <Avatar className="relative z-20 border-2 border-white">
+          <AvatarImage
+            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb"
+            alt="@avatar2"
+          />
+          <AvatarFallback>CD</AvatarFallback>
+        </Avatar>
+        <Avatar className="relative z-10 border-2 border-white">
+          <AvatarImage
+            src="https://images.unsplash.com/photo-1511367461989-f85a21fda167"
+            alt="@avatar3"
+          />
+          <AvatarFallback>EF</AvatarFallback>
+        </Avatar>
+        <Avatar className="relative z-0 border-2 border-white">
+          <AvatarImage
+            src="https://images.unsplash.com/photo-1517841905240-472988babdf9"
+            alt="@avatar4"
+          />
+          <AvatarFallback>GH</AvatarFallback>
+        </Avatar>
       </div>
+    </div>
+  </div>
+</div>
     </div>
   );
 };
