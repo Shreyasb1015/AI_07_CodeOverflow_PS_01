@@ -152,16 +152,21 @@ const Register = () => {
         style={{ backgroundColor: "var(--orange-color)" }}
       >
         <div className="max-w-md mx-auto">
-          <h1
-            className="text-4xl font-bold mb-4"
-            style={{ color: "var(--white-color)" }}
-          >
-            Join the world’s leading design community.
-          </h1>
-          <p className="text-base mb-4" style={{ color: "var(--white-color)" }}>
-            Showcase your portfolio, connect with professionals, and explore
-            endless opportunities in the design world.
-          </p>
+        <h1
+        className="text-4xl font-bold mb-4"
+        style={{ color: "var(--white-color)" }}
+      >
+        Welcome to the Future of ERP Support with AI 
+      </h1>
+      <p className="text-base mb-4" style={{ color: "var(--white-color)" }}>
+      Meet AvaERP—your AI-powered guide for seamless GST, Sales, and Production workflows. Say goodbye to manuals and hello to lifelike, conversational support. 
+      </p>
+      {/* <p className="text-base mb-4" style={{ color: "var(--white-color)" }}>
+        Step into a world where ERP systems come alive. Say goodbye to static manuals and hello to AvaERP—your AI-powered guide that speaks, listens, and understands. Whether you're navigating GST compliance, managing sales orders, or troubleshooting production workflows, AvaERP is here to transform complexity into clarity.
+      </p>
+      <p className="text-base mb-4" style={{ color: "var(--white-color)" }}>
+        With lifelike avatar interactions, real-time answers, and seamless integration with IDMS ERP, AvaERP doesn’t just solve problems—it makes every interaction feel human. From multilingual support to dynamic workflows, experience ERP like never before.
+      </p> */}
         </div>
       </div>
 
@@ -250,9 +255,9 @@ const Register = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectItem value="user">User</SelectItem>
-              <SelectItem value="expert">Expert</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="user">Employees</SelectItem>
+              <SelectItem value="expert">Administrators</SelectItem>
+              <SelectItem value="admin">Support Teams</SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>

@@ -5,40 +5,41 @@ import Navbar from "../components/Navbar/Navbar";
 import Footer from "../components/Footer/Footer";
 import ReviewCard from "../components/ui/card";
 import { Accordion, AccordionItem } from "../components/ui/Accordion";
-import Chatbot from "../components/Chatbot/Chatbot"; 
+import Chatbot from "../components/Chatbot/Chatbot";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-
 const Home = () => {
+  const user = localStorage.getItem("currentUser");
+  const navigate = useNavigate();
 
-  const user=localStorage.getItem("currentUser");
-  const navigate=useNavigate();
   useEffect(() => {
-    if(!user)
-      {
-        console.log(user);
-        navigate('/login');
-      }
+    if (!user) {
+      console.log(user);
+      navigate("/login");
+    }
   }, []);
 
   const reviews = [
     {
-      name: "Sarah Johnson",
-      role: "CTO @TechCorp",
-      feedback: "TechWave transformed our business operations completely!",
+      name: "Rajesh Kumar",
+      role: "CFO @Manufacturing Inc.",
+      feedback:
+        "EchoMind transformed our GST compliance process. It’s like having an expert available 24/7!",
       rating: 5,
     },
     {
-      name: "Mike Chen",
-      role: "Startup Founder",
-      feedback: "The best platform for scalable solutions. Highly recommended!",
+      name: "Priya Sharma",
+      role: "Production Manager",
+      feedback:
+        "The AI-guided workflows have made production planning seamless and efficient.",
       rating: 5,
     },
     {
-      name: "Emma Wilson",
-      role: "Product Manager",
-      feedback: "Intuitive interface with powerful features. Love it!",
+      name: "Anil Mehta",
+      role: "Sales Lead",
+      feedback:
+        "From order tracking to E-Way Bills, EchoMind has simplified everything. Highly recommended!",
       rating: 4,
     },
   ];
@@ -48,24 +49,39 @@ const Home = () => {
       <Navbar />
       <main className="container mx-auto px-4">
         {/* Hero Section */}
-        <section className="min-h-[80vh] flex flex-col items-center justify-center text-center">
+        <section className="min-h-[100vh] flex flex-col items-center justify-center text-center relative overflow-hidden">
+          {/* Background Video */}
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline // Ensures video plays on mobile devices
+            className="absolute top-0 left-0 w-full h-full object-cover z-0 opacity-50"
+          >
+            <source
+              src="src/assets/videos/cool-bg.mp4" // Replace with the correct path to your video
+              type="video/mp4"
+            />
+            Your browser does not support the video tag.
+          </video>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="max-w-4xl space-y-6"
+            className="max-w-4xl space-y-6 relative z-10"
           >
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-orange-500 to-orange-800 bg-clip-text text-transparent">
-              Transform Your Digital Presence
+              Welcome to EchoMind
             </h1>
 
             <div className="text-2xl md:text-3xl text-muted-foreground">
               <Typewriter
                 words={[
-                  "AI-Powered Solutions",
-                  "Cloud Infrastructure",
-                  "Real-Time Analytics",
-                  "Enterprise Security",
+                  "AI-Powered ERP Solutions",
+                  "Seamless GST Compliance",
+                  "Real-Time Production Insights",
+                  "Human-Like Conversational Support",
                 ]}
                 loop={true}
                 cursor
@@ -95,19 +111,19 @@ const Home = () => {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                title: "AI Integration",
-                desc: "Smart solutions powered by machine learning",
+                title: "AI-Driven Support",
+                desc: "Get instant, human-like assistance for all ERP workflows.",
                 icon: "🤖",
               },
               {
-                title: "Real-Time Analytics",
-                desc: "Instant insights with interactive dashboards",
+                title: "GST Compliance",
+                desc: "Automated GST calculations, e-invoicing, and return filing.",
                 icon: "📊",
               },
               {
-                title: "Cloud Native",
-                desc: "Scalable infrastructure on secure cloud",
-                icon: "☁️",
+                title: "Real-Time Insights",
+                desc: "Interactive dashboards for sales, production, and inventory.",
+                icon: "📈",
               },
             ].map((feature, index) => (
               <motion.div
@@ -129,7 +145,9 @@ const Home = () => {
 
         {/* Reviews Section */}
         <section className="my-24">
-          <h2 className="text-4xl font-bold text-center mb-12">What Our Clients Say</h2>
+          <h2 className="text-4xl font-bold text-center mb-12">
+            What Our Users Say
+          </h2>
           <div className="grid md:grid-cols-3 gap-8">
             {reviews.map((review, index) => (
               <ReviewCard key={index} review={review} index={index} />
@@ -139,23 +157,25 @@ const Home = () => {
 
         {/* FAQ Section */}
         <section className="my-24 max-w-3xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-12">Frequently Asked Questions</h2>
+          <h2 className="text-4xl font-bold text-center mb-12">
+            Frequently Asked Questions
+          </h2>
           <Accordion>
             <AccordionItem
-              title="What makes TechWave different?"
-              content="Our unique combination of AI-powered analytics and enterprise-grade security sets us apart from competitors."
+              title="What makes EchoMind different?"
+              content="EchoMind combines AI-powered conversational support with deep ERP integration, making it feel like you’re talking to an expert."
             />
             <AccordionItem
-              title="How secure is my data?"
-              content="We use military-grade encryption and comply with all major data protection regulations."
+              title="How secure is my ERP data?"
+              content="We use enterprise-grade encryption and comply with all data protection regulations to keep your data safe."
             />
             <AccordionItem
-              title="Can I integrate with existing tools?"
-              content="Yes! We offer seamless integration with all popular productivity and analytics tools."
+              title="Can EchoMind handle GST compliance?"
+              content="Yes! EchoMind automates GST calculations, e-invoicing, and return filing, ensuring full compliance."
             />
             <AccordionItem
               title="What support options are available?"
-              content="24/7 premium support with dedicated account managers for enterprise clients."
+              content="We offer 24/7 AI-driven support, with human escalation for complex queries."
             />
           </Accordion>
         </section>
