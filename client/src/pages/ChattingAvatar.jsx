@@ -124,7 +124,7 @@ const ChattingAvatar = () => {
     formData.append("file", file);
 
     try {
-      const response = await axios.post("http://localhost:5000/upload-file", formData, {
+      const response = await axios.post("CHATIMAGE_URL", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
