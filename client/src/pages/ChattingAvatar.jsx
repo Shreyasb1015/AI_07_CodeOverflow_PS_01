@@ -1,112 +1,136 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTheme } from "../context/Theme";
-import { Mic, Paperclip, Camera, Send } from "lucide-react";
+import { Mic, Paperclip, Camera, Send, StopCircle, Play } from "lucide-react";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar/Navbar";
 import Footer from "../components/Footer/Footer";
+import { toast } from "sonner";
+import axiosClient from "../api/axios_client";
 
 const ChattingAvatar = () => {
-  const { theme } = useTheme(); // Get the current theme (light/dark)
-  const [selectedModel, setSelectedModel] = useState(1); // Selected model (1, 2, or 3)
-  const [message, setMessage] = useState(""); // User input message
+  const { theme } = useTheme();
+  const [selectedModel, setSelectedModel] = useState(1);
+  const [message, setMessage] = useState("");
   const [chatHistory, setChatHistory] = useState({
-    1: [], // Chat history for Model 1
-    2: [], // Chat history for Model 2
-    3: [], // Chat history for Model 3
+    1: [],
+    2: [],
+    3: [],
   });
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioURL, setAudioURL] = useState(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
-  // Avatar images for each model
   const avatarImages = {
-    1: "/src/assets/avatar/avatar1.jpg", // Replace with actual paths
+    1: "/src/assets/avatar/avatar1.jpg",
     2: "/src/assets/avatar/avatar2.jpg",
     3: "/src/assets/avatar/avatar3.jpg",
   };
 
-  // Handle sending a message
   const handleSendMessage = () => {
     if (message.trim() === "") return;
-
-    // Add user message to chat history for the selected model
     setChatHistory((prev) => ({
       ...prev,
-      [selectedModel]: [
-        ...prev[selectedModel],
-        { sender: "user", text: message },
-      ],
+      [selectedModel]: [...prev[selectedModel], { sender: "user", text: message }],
     }));
-
-    // Simulate AI response (replace with actual API call)
     setTimeout(() => {
       setChatHistory((prev) => ({
         ...prev,
-        [selectedModel]: [
-          ...prev[selectedModel],
-          { sender: "ai", text: `This is a response from Model ${selectedModel}.` },
-        ],
+        [selectedModel]: [...prev[selectedModel], { sender: "ai", text: `This is a response from Model ${selectedModel}.` }],
       }));
     }, 1000);
-
-    setMessage(""); // Clear input field
+    setMessage("");
   };
 
-  // Handle voice input
-  const handleVoiceInput = () => {
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = "en-US";
-    recognition.start();
+  const handleVoiceInput = async () => {
+    if (isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      return;
+    }
 
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setMessage(transcript);
-    };
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
 
-    recognition.onerror = (event) => {
-      console.error("Voice input error:", event.error);
-    };
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/wav",
+        });
+
+        // Convert Blob to File (Required for API call)
+        const audioFile = new File([audioBlob], "recording.mp3", {
+          type: "audio/mp3",
+        });
+
+        // Create FormData and append the file
+        const formData = new FormData();
+        formData.append("audio", audioFile);
+
+        try {
+          const response = await axiosClient.post("http://localhost:5000/upload-audio", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) throw new Error("Failed to upload audio");
+
+          const data = await response.json();
+          const audioURL = data.audioUrl; 
+
+          setChatHistory((prev) => ({
+            ...prev,
+            [selectedModel]: [
+              ...prev[selectedModel],
+              { sender: "user", audio: audioURL },
+            ],
+          }));
+
+          toast.success("Audio uploaded successfully!");
+        } catch (error) {
+          console.error("Error uploading audio:", error);
+          toast.error("Failed to upload audio.");
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      toast.info("Recording started...");
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      toast.error("Microphone access denied!");
+    }
   };
 
-  // Handle file upload
-  const handleFileUpload = () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.onchange = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        setChatHistory((prev) => ({
-          ...prev,
-          [selectedModel]: [
-            ...prev[selectedModel],
-            { sender: "user", text: `File: ${file.name}` },
-          ],
-        }));
-      }
-    };
-    input.click();
-  };
 
-  // Handle camera input
-  const handleCameraInput = () => {
-    alert("Camera input is not implemented yet.");
+  const handlePlayAudio = (url) => {
+    const audio = new Audio(url);
+    audio.play();
   };
 
   return (
     <div
       className={`min-h-screen flex flex-col ${
-        theme === "dark" ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-900"
+        theme === "dark"
+          ? "bg-gray-900 text-white"
+          : "bg-gray-100 text-gray-900"
       }`}
     >
-      {/* Navbar */}
       <Navbar />
-
-      {/* Main Content */}
       <div className="flex flex-col md:flex-row p-6 gap-6 flex-1">
-        {/* Left Section: Avatar and Model Selection */}
         <div className="w-full md:w-1/4 flex flex-col items-center gap-6">
-          {/* Avatar Image */}
           <motion.div
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 300 }}
@@ -116,36 +140,20 @@ const ChattingAvatar = () => {
               <AvatarFallback>AI</AvatarFallback>
             </Avatar>
           </motion.div>
-
-          {/* Model Selection */}
           <div className="flex flex-col gap-4 w-full">
-            <Button
-              variant={selectedModel === 1 ? "default" : "outline"}
-              onClick={() => setSelectedModel(1)}
-              className="w-full"
-            >
-              Aether
-            </Button>
-            <Button
-              variant={selectedModel === 2 ? "default" : "outline"}
-              onClick={() => setSelectedModel(2)}
-              className="w-full"
-            >
-              Nova
-            </Button>
-            <Button
-              variant={selectedModel === 3 ? "default" : "outline"}
-              onClick={() => setSelectedModel(3)}
-              className="w-full"
-            >
-              Neo              
-            </Button>
+            {[1, 2, 3].map((model) => (
+              <Button
+                key={model}
+                variant={selectedModel === model ? "default" : "outline"}
+                onClick={() => setSelectedModel(model)}
+                className="w-full"
+              >
+                {model === 1 ? "Aether" : model === 2 ? "Nova" : "Neo"}
+              </Button>
+            ))}
           </div>
         </div>
-
-        {/* Right Section: Chat Interface */}
         <div className="w-full md:w-3/4 flex flex-col gap-6 h-[calc(100vh-100px)]">
-          {/* Chat History */}
           <ScrollArea className="flex-1 p-4 rounded-lg border bg-background">
             {chatHistory[selectedModel].map((chat, index) => (
               <motion.div
@@ -157,32 +165,48 @@ const ChattingAvatar = () => {
                   chat.sender === "user" ? "items-end" : "items-start"
                 }`}
               >
-                <div
-                  className={`max-w-[80%] p-3 rounded-lg ${
-                    chat.sender === "user"
-                      ? "bg-orange-500 text-white"
-                      : "bg-gray-200 text-gray-900"
-                  }`}
-                >
-                  {chat.text}
-                </div>
+                {chat.text && (
+                  <div
+                    className={`max-w-[80%] p-3 rounded-lg ${
+                      chat.sender === "user"
+                        ? "bg-orange-500 text-white"
+                        : "bg-gray-200 text-gray-900"
+                    }`}
+                  >
+                    {chat.text}
+                  </div>
+                )}
+                {chat.audio && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handlePlayAudio(chat.audio)}
+                  >
+                    <Play className="h-5 w-5" /> Play Audio
+                  </Button>
+                )}
                 <span className="text-sm text-muted-foreground">
                   {chat.sender === "user" ? "You" : `Model ${selectedModel}`}
                 </span>
               </motion.div>
             ))}
           </ScrollArea>
-
-          {/* Input Area */}
           <div className="flex gap-4 p-4 border-t">
-            <Button variant="outline" onClick={handleFileUpload}>
+            <Button variant="outline" >
               <Paperclip className="h-5 w-5" />
             </Button>
-            <Button variant="outline" onClick={handleCameraInput}>
+            <Button variant="outline" >
               <Camera className="h-5 w-5" />
             </Button>
-            <Button variant="outline" onClick={handleVoiceInput}>
-              <Mic className="h-5 w-5" />
+            <Button
+              variant="outline"
+              onClick={handleVoiceInput}
+              className={isRecording ? "bg-red-500" : ""}
+            >
+              {isRecording ? (
+                <StopCircle className="h-5 w-5" />
+              ) : (
+                <Mic className="h-5 w-5" />
+              )}
             </Button>
             <Input
               type="text"
@@ -198,8 +222,6 @@ const ChattingAvatar = () => {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
       <Footer />
     </div>
   );
