@@ -36,8 +36,9 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
 export const signup = asyncHandler(async (req, res) => {
   try {
     
-    const { name, email, password, role } = req.body;
-    if (!name || !email || !password || !role) {
+    const { name, email, password, role, department } = req.body;
+    
+    if (!name || !email || !password || !role || !department) {
       return res
         .status(400)
         .json({ message: "All fields are required", status: false });
@@ -58,6 +59,7 @@ export const signup = asyncHandler(async (req, res) => {
       name,
       email,
       role,
+      department,
       otpToVerify: otp,
       password: hashedPassword,
     });
@@ -161,21 +163,29 @@ export const login = asyncHandler(async (req, res) => {
   }
 });
 
-export const getUsers = asyncHandler(async (req, res) => {
+export const getUsers = asyncHandler(async (req, res, next) => {
   try {
     const { type } = req.query;
-    console.log(type);
-    
+    console.log(`Requested user role: ${type}`);
+
+    const validRoles = ["Employee", "Administrator", "SupportTeam"];
+
     let filter = {};
-    if (type == "User" || type == "Expert") {
+
+    if (type && validRoles.includes(type)) {
       filter.role = type;
     }
-    
+
     const users = await User.find(filter);
 
-    res.status(200).json({ message: "Users Fetched Successfully", users });
+    res.status(200).json({
+      success: true,
+      message: "Users fetched successfully",
+      users,
+    });
   } catch (error) {
-    throw new ApiError(500, error.message);
+    console.error("Error fetching users:", error);
+    next(new ApiError(500, "Internal Server Error"));
   }
 });
 
