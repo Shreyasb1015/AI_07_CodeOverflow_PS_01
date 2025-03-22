@@ -12,7 +12,7 @@ const navItems = [
   { name: "ChatWithAI", path: "/chat" },
 ];
 
-if (user.role == "Administrator"){
+if (user?.role == "Administrator"){
   navItems.push({ name: "Knowledge Base", path: "knowledge-base" });
 }
 
