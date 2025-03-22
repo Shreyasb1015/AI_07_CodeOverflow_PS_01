@@ -1,6 +1,8 @@
 import { Complaint } from "../models/complaint_model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
+import { sendApologyMail } from "../utils/helpers.js";
+import { User } from "../models/user_model.js";
 
 
 const checkAdmin = (req) => {
@@ -20,11 +22,15 @@ export const createComplaint = asyncHandler(async (req, res) => {
       throw new ApiError(400, "All fields are required");
     }
 
+    const { name,email } = await User.findById(userId);
+
     const complaint = await Complaint.create({
       userId,
       issueType,
       description,
     });
+
+    await sendApologyMail(name,email,issueType,description)
 
     res.status(201).json({ success: true, complaint });
   } catch (error) {

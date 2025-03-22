@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-const sendVerificationEmail = async (userEmail,otp,name) => {
+const sendVerificationEmail = async (userEmail, otp, name) => {
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -10,11 +10,11 @@ const sendVerificationEmail = async (userEmail,otp,name) => {
       },
     });
 
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: userEmail,
-    subject: "Email Verification",
-    html: `
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: userEmail,
+      subject: "Email Verification",
+      html: `
     <!DOCTYPE html>
 <html>
 <head>
@@ -92,9 +92,8 @@ const sendVerificationEmail = async (userEmail,otp,name) => {
     </div>
 </body>
 </html>
-
   `,
-  };
+    };
 
     await transporter.sendMail(mailOptions);
     console.log(`Verification email sent to ${userEmail}`);
@@ -104,4 +103,106 @@ const sendVerificationEmail = async (userEmail,otp,name) => {
   }
 };
 
-export { sendVerificationEmail };
+const sendApologyMail = async (user_name,userEmail, issueType, description) => {
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS_KEY,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: userEmail,
+      subject: "Apology Mail",
+      html: `<!DOCTYPE html>
+<html>
+<head>
+    <title>Apology for AI Misbehavior</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #000; /* Black background */
+            color: #fff; /* White text */
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #000; /* Black */
+            border: 3px solid #FFA500; /* Orange Border */
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(255, 165, 0, 0.6); /* Orange glow */
+        }
+        .header {
+            background-color: #FFA500; /* Orange */
+            padding: 15px;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #000; /* Black text */
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .message {
+            background-color: #FFA500; /* Orange */
+            color: #000; /* Black text */
+            font-weight: bold;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 18px;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .footer a {
+            color: #FFA500;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Apology from EchoMind</h1>
+        </div>
+        <div class="content">
+            <p>Dear <strong>${user_name}</strong>,</p>
+            <p>We sincerely apologize for the issue you encountered while interacting with our AI.</p>
+            <div class="message">Issue Type: <strong>${issueType}</strong></div>
+            <p>Description: <strong>${description}</strong></p>
+            <p>We take such matters very seriously and are actively working on improvements to ensure this does not happen again.</p>
+            <p>If you have any further concerns, please do not hesitate to reach out to us.</p>
+            <p>We truly appreciate your patience and understanding. 🙏</p>
+        </div>
+        <div class="footer">
+            <p>Contact us at: <a href="mailto:codecommandos@gmail.com">codecommandos@gmail.com</a></p>
+            <p>Thank you for being a valued user. 🚀</p>
+        </div>
+    </div>
+</body>
+</html>
+    `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Apology email sent to ${userEmail}`);
+  } catch (error) {
+    console.error("Error sending email:", error);
+    throw new Error("Failed to send apology email");
+  }
+};
+
+export { sendVerificationEmail,sendApologyMail };
