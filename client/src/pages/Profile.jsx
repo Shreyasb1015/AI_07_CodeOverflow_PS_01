@@ -48,17 +48,10 @@ const Profile = () => {
     navigate("/login");
   };
 
-  const [userDetails] = useState({
-    profileImage: userProfileImage,
-    username: "Gaurav Mahadeshwar",
-    location: "Titwala (W), Kalyan, Thane",
-    email: "gaurav@example.com",
-  });
-
-  if (user == null) return (
-  <div>
-    
-  </div>);
+  if (user == null) {
+    console.log("hi");
+    return <div></div>;
+  }
 
   return (
     <>
@@ -199,11 +192,11 @@ const Profile = () => {
           {/* Box 1 - Profile */}
           <div className="div1 w-80">
             <img
-              src={userDetails.profileImage}
+              src={user.profilePic}
               alt="User"
               className="w-32 h-32 rounded-full object-cover mb-4 border-4 border-white shadow-md"
             />
-            <h2 className="text-xl font-bold">{userDetails.username}</h2>
+            <h2 className="text-xl font-bold">{user.name}</h2>
             <p>Bio</p>
           </div>
 
@@ -239,11 +232,11 @@ const Profile = () => {
               <h2 className="text-xl font-semibold mb-2">
                 Personal Information
               </h2>
-              <p className="mb-1">Email: {userDetails.email}</p>
-              <p className="mb-1">Location: {userDetails.location}</p>
+              <p className="mb-1">Email: {user.email}</p>
+              <p className="mb-1">Department: {user.department}</p>
               <p className="mt-4 font-medium">Metadata:</p>
               <ul className="list-disc list-inside text-sm">
-                <li>Member since: 2022</li>
+                <li>Member since: {user.createdAt}</li>
                 <li>Status: Active</li>
               </ul>
             </div>
@@ -261,9 +254,7 @@ const Profile = () => {
           </div>
 
           {/* Box 4 - Achievements */}
-          <div className="div4 w-full">
-            
-          </div>
+          <div className="div4 w-full"></div>
         </div>
       </div>
     </>

@@ -30,9 +30,15 @@ export const MEET_ROUTES = {
   CANCEL: "/cancel/:meetingId",
 };
 
+export const AVATAR_ROUTES = {
+  GET_AVATARS: "/",
+  GET_AVATAR: "/:id"
+}
+
 export const API_ROUTES = {
   USER: "/api/user",
   SOCIAL: "/api/social",
   CHAT: "/api/chat",
   MEETING: "/api/meet",
+  AVATAR: "/api/avatar"
 };
