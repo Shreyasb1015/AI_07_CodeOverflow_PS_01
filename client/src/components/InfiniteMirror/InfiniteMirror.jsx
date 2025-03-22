@@ -1,17 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react"; // Import X icon for close button
+import { X } from "lucide-react";
 import axios from "axios";
+import { ANALYZEFRAME_URL } from "../../api/flask_routes.js";
 
 const InfiniteMirror = ({ onClose }) => {
   const videoRef = useRef(null);
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [frameCount, setFrameCount] = useState(0);
 
-  // Start the camera
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" }, // Use front camera
+        video: { facingMode: "user" },
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -23,19 +23,17 @@ const InfiniteMirror = ({ onClose }) => {
     }
   };
 
-  // Stop the camera
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject;
       const tracks = stream.getTracks();
-      tracks.forEach((track) => track.stop()); // Stop all tracks
+      tracks.forEach((track) => track.stop());
       videoRef.current.srcObject = null;
       setIsCameraOn(false);
     }
-    onClose(); // Close the dialog
+    onClose();
   };
 
-  // Capture and send frames
   useEffect(() => {
     if (!isCameraOn) return;
 
@@ -47,14 +45,12 @@ const InfiniteMirror = ({ onClose }) => {
         const context = canvas.getContext("2d");
         context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
 
-        // Convert canvas to Blob
         canvas.toBlob((blob) => {
           const formData = new FormData();
           formData.append("frame", blob, `frame_${frameCount}.jpg`);
 
-          // Send frame to backend
           axios
-            .post("http://localhost:5000/video-frame", formData, {
+            .post(ANALYZEFRAME_URL, formData, {
               headers: {
                 "Content-Type": "multipart/form-data",
               },
@@ -67,20 +63,18 @@ const InfiniteMirror = ({ onClose }) => {
             });
         }, "image/jpeg");
       }
-      setFrameCount((prev) => prev + 1); // Increment frame count
-    }, 100); // Capture every 100ms (10 frames per second)
+      setFrameCount((prev) => prev + 1);
+    }, 100);
 
-    return () => clearInterval(interval); // Cleanup interval
+    return () => clearInterval(interval);
   }, [isCameraOn, frameCount]);
 
-  // Start camera when component mounts
   useEffect(() => {
     startCamera();
   }, []);
 
   return (
     <div className="relative w-full h-full">
-      {/* Close Button */}
       <button
         onClick={stopCamera}
         className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 z-10"
@@ -88,7 +82,6 @@ const InfiniteMirror = ({ onClose }) => {
         <X className="h-5 w-5" />
       </button>
 
-      {/* Video Feed */}
       <video
         ref={videoRef}
         autoPlay
