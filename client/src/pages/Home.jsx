@@ -72,7 +72,7 @@ const Home = () => {
             className="max-w-4xl space-y-6 relative z-10"
           >
             <h1 className="text-3xl md:text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-800 bg-clip-text text-transparent">
-              Amplifying Intelligence, Streamlining Efficiency
+              Intelligent Responses. Human Touch
             </h1>
 
             <div className="text-2xl md:text-3xl text-muted-foreground">

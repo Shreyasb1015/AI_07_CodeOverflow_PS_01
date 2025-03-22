@@ -87,4 +87,4 @@ const aiAvatarSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default AIAvatar = mongoose.model("AIAvatar", aiAvatarSchema);;
+export const AIAvatar = mongoose.model("AIAvatar", aiAvatarSchema);;
