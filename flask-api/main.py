@@ -1,4 +1,5 @@
 import re
+from time import time
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from flask_cors import CORS
@@ -8,14 +9,14 @@ from pydantic import SecretStr
 from PIL import Image
 import pytesseract
 import io
-# import chromadb
-# from chromadb.config import Settings
+import chromadb
+from chromadb.config import Settings
 import shutil
+import requests
 from create_knoweldge_base import create_knowledge_base_fn
 from fetch_from_knoweldge_base import fetch_from_knowledge_base
 import json
-import requests
-import time
+import base64
 
 
 app = Flask(__name__)
@@ -34,8 +35,8 @@ def chat():
     else:
         return jsonify({"response": "Please provide user input"})
 
-pytesseract.pytesseract.tesseract_cmd = r"D:\Tesseract-OCR\tesseract.exe"
 
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 @app.route('/ocr', methods=['POST'])
 def ocr():
     if 'image' not in request.files:
@@ -166,11 +167,11 @@ def chatting():
         return jsonify({"response": "Please provide user input"})
     
     try:
-        # First fetch relevant documents from the knowledge base
+
         docs = fetch_from_knowledge_base(user_input)
         
         if not docs or len(docs) == 0:
-            # If no relevant documents are found, just use the regular model
+           
             model = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash",
                 api_key=SecretStr(GOOGLE_GEMINI_API_KEY) if GOOGLE_GEMINI_API_KEY else None
@@ -178,7 +179,7 @@ def chatting():
             full_prompt = f"{MY_PROMPT}\n\nUser Query: {user_input}\n\nProvide a response in the JSON format specified above."
             result = model.invoke(full_prompt).content
             cleaned_result = clean_text_content(str(result))
-            # Attempt to parse result as JSON; otherwise, wrap it in our response format.
+            
             try:
                 parsed_result = json.loads(cleaned_result)
             except Exception:
@@ -191,11 +192,10 @@ def chatting():
                 }
             return jsonify({"response": parsed_result, "source_docs": []})
         
-        # Extract the content from the documents and clean them
         doc_contents = [clean_text_content(doc.page_content) for doc in docs]
         doc_sources = [doc.metadata.get('source', 'Unknown') if doc.metadata else 'Unknown' for doc in docs]
         
-        # Format document contents for better readability in the prompt
+       
         formatted_docs = '\n\n'.join(doc_contents)
         
         enhanced_prompt = f"""
@@ -229,7 +229,7 @@ what information is missing.
                 "suggested_reports": []
             }
             
-        # Clean the source document contents for display
+        
         clean_doc_contents = [clean_text_content(doc.page_content) for doc in docs]
         
         response_data = {
@@ -246,18 +246,32 @@ what information is missing.
 
 
 def clean_text_content(text):
+    
+    code_block_pattern = r'```(?:json)?\s*(\{[\s\S]*?\})\s*```'
+    code_match = re.search(code_block_pattern, text)
+    if code_match:
+      
+        json_content = code_match.group(1)
+       
+        json_content = json_content.replace('\\"', '"')
+        return json_content
+
+
     cleaned = text.replace('\\n', ' ').replace('\\t', ' ')
-    leaned = re.sub(r'\*\*|\*', '', cleaned)
+    cleaned = re.sub(r'\*\*|\*', '', cleaned)
     cleaned = re.sub(r'\s+', ' ', cleaned)
-    cleaned = re.sub(r'(?<!\\)"', '\\"', cleaned) 
+    
+    
+    cleaned = cleaned.replace('\\"', '"')  
+    cleaned = cleaned.replace('\\\\', '\\')  
+    
+    cleaned = cleaned.replace('\\*', '•')
+    cleaned = cleaned.replace('\\r', ' ')
+    cleaned = re.sub(r'\\([^"\\])', r'\1', cleaned)
+    
     return cleaned.strip()
 
-
-#bolne lagi
-# Load API key from environment
 DID_API_KEY = os.getenv("MYYMYY")
-
-# Common headers
 headers = {
     "Authorization": f"Basic {DID_API_KEY}",
     "Content-Type": "application/json"
@@ -266,17 +280,17 @@ headers = {
 @app.route('/generate-video', methods=['POST'])
 def generate_and_fetch_video():
     try:
-        # Input from client
+       
         data = request.json
-        input_text = data.get('text', """
+        input_text = data.get('text', """ 
 Hey!
 Great to meet you — I’m your assistant, here to help you turn your ideas into reality.
 Whether it’s building a cool project, figuring out a pipeline, or just exploring new tech, I’ve got your back.
 So, what are we working on today?
-""")
-        source_url = data.get("source_url", "https://cdn.getmerlin.in/cms/img_AQO_Pe_Pie_STC_59p_Oy_Zo8mbm7d_5a6a9d88fe.png")
+""")# type: ignore
+        
+        source_url = data.get("source_url", "https://cdn.getmerlin.in/cms/img_AQO_Pe_Pie_STC_59p_Oy_Zo8mbm7d_5a6a9d88fe.png") # type: ignore
 
-        # Step 1: POST - initiate video generation
         payload = {
             "source_url": source_url,
             "script": {
@@ -292,10 +306,9 @@ So, what are we working on today?
 
         talk_id = post_response.json().get("id")
 
-        # Step 2: Keep polling GET until status is done
         get_url = f"https://api.d-id.com/talks/{talk_id}"
 
-        for _ in range(30):  # max 30 attempts = ~60 seconds dont delete this comment, can change max time later!
+        for _ in range(30): 
             get_response = requests.get(get_url, headers=headers)
             if get_response.status_code == 200:
                 result = get_response.json()
@@ -310,7 +323,7 @@ So, what are we working on today?
                 elif status == "error":
                     return jsonify({"error": "❌ Video generation failed"}), 500
                 else:
-                    time.sleep(2)  # wait before next poll
+                    time.sleep(2)  
             else:
                 return jsonify({"error": "⚠️ Failed to check video status", "details": get_response.text}), get_response.status_code
 
@@ -319,7 +332,142 @@ So, what are we working on today?
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/image-chat', methods=['POST'])
+def image_chat():
+    try:
+        if 'image' not in request.files:
+            return jsonify({
+                "response": {
+                    "response_code": "422", 
+                    "content": "Please provide an image file", 
+                    "module_reference": None, 
+                    "related_transactions": [], 
+                    "suggested_reports": []
+                }, 
+                "source_docs": []
+            })
 
+        image_file = request.files['image']
+        user_input = request.form.get("user_input", "Analyze this image")
+        
+        if image_file.filename == '':
+            return jsonify({
+                "response": {
+                    "response_code": "422", 
+                    "content": "No selected image file", 
+                    "module_reference": None, 
+                    "related_transactions": [], 
+                    "suggested_reports": []
+                }, 
+                "source_docs": []
+            })
+
+        image_content = image_file.read()
+        image = Image.open(io.BytesIO(image_content))
+        
+        base64_image = base64.b64encode(image_content).decode('utf-8')
+        
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        
+        model = ChatGoogleGenerativeAI(
+            model="gemini-2.0-pro-exp-02-05",  
+            api_key=SecretStr(GOOGLE_GEMINI_API_KEY) if GOOGLE_GEMINI_API_KEY else None
+        )
+        
+        full_prompt = f"{MY_PROMPT}\n\nUser Query with Image: {user_input}\n\nProvide a response in the JSON format specified above based on the image content."
+        
+        try:
+           
+            text_content = pytesseract.image_to_string(image)
+            
+            if len(text_content) > 50:
+                docs = fetch_from_knowledge_base(text_content)
+                
+                if docs and len(docs) > 0:
+                    doc_contents = [clean_text_content(doc.page_content) for doc in docs]
+                    doc_sources = [doc.metadata.get('source', 'Unknown') if doc.metadata else 'Unknown' for doc in docs]
+                    formatted_docs = '\n\n'.join(doc_contents)
+                    enhanced_prompt = f"""
+Based on the following information from our knowledge base:
+{'-' * 30}
+{formatted_docs}
+{'-' * 30}
+
+Please analyze this image and answer the query: "{user_input}"
+
+Consider both the image content and the knowledge base information in your response.
+"""
+                    # Fixed: Use the correct message format for Gemini
+                    messages = [
+                        {"role": "user", "content": enhanced_prompt},
+                        {"role": "user", "content": [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}
+                    ]
+                    
+                    result = model.invoke(messages).content
+                    
+                    cleaned_result = clean_text_content(str(result))
+                    
+                    try:
+                        result_json = json.loads(cleaned_result)
+                    except Exception:
+                        result_json = {
+                            "response_code": "200",
+                            "content": cleaned_result,
+                            "module_reference": None,
+                            "related_transactions": [],
+                            "suggested_reports": []
+                        }
+                        
+                    clean_doc_contents = [clean_text_content(doc.page_content) for doc in docs]
+                    
+                    response_data = {
+                        "response": result_json,
+                        "source_docs": [
+                            {"content": clean_doc_contents[i], "source": doc_sources[i]} for i in range(len(clean_doc_contents))
+                        ]
+                    }
+                    
+                    return jsonify(response_data)
+            
+        except Exception as e:
+            print(f"Error during knowledge base lookup: {str(e)}")
+            
+        messages = [
+            {"role": "user", "content": full_prompt},
+            {"role": "user", "content": [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}
+        ]
+        
+        result = model.invoke(messages).content
+        
+        cleaned_result = clean_text_content(str(result))
+        
+        try:
+            parsed_result = json.loads(cleaned_result)
+        except Exception:
+            parsed_result = {
+                "response_code": "200",
+                "content": cleaned_result,
+                "module_reference": None,
+                "related_transactions": [],
+                "suggested_reports": []
+            }
+            
+        return jsonify({"response": parsed_result, "source_docs": []})
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()  # Print full traceback for debugging
+        return jsonify({
+            "response": {
+                "response_code": "500", 
+                "content": f"An error occurred processing the image: {str(e)}", 
+                "module_reference": None, 
+                "related_transactions": [], 
+                "suggested_reports": []
+            }, 
+            "source_docs": []
+        })
 if __name__ == "__main__":
     app.run(debug=True)
       
+    
