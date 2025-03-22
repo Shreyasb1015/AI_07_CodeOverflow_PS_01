@@ -24,7 +24,11 @@ function App() {
           <Route path="/" element={<Home />}/>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+<<<<<<< HEAD
           <Route path="/profile" element={<Profile />}/>
+=======
+          <Route path="/profile" element={<Profile />} />
+>>>>>>> 76418c2dc9398617c022df51d77835118a57e397
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/experts" element={<Experts />} />
           <Route path="/create-group" element={<CreateGroup />} />

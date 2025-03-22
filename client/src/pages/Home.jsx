@@ -71,17 +71,19 @@ const Home = () => {
             transition={{ duration: 0.8 }}
             className="max-w-4xl space-y-6 relative z-10"
           >
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-orange-500 to-orange-800 bg-clip-text text-transparent">
-              Welcome to EchoMind
+            <h1 className="text-3xl md:text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-800 bg-clip-text text-transparent">
+              Amplifying Intelligence, Streamlining Efficiency
             </h1>
 
             <div className="text-2xl md:text-3xl text-muted-foreground">
               <Typewriter
                 words={[
-                  "AI-Powered ERP Solutions",
-                  "Seamless GST Compliance",
-                  "Real-Time Production Insights",
-                  "Human-Like Conversational Support",
+                  "Seamless ERP Integration",
+                  "AI-Driven Insights",
+                  "Real-Time Data Analytics",
+                  "Automated GST Compliance",
+                  "Streamlined Inventory Management",
+                  "Advanced User Access Control",
                 ]}
                 loop={true}
                 cursor
@@ -146,7 +148,7 @@ const Home = () => {
         {/* Reviews Section */}
         <section className="my-24">
           <h2 className="text-4xl font-bold text-center mb-12">
-            What Our Users Say
+            What Our Clients Say
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             {reviews.map((review, index) => (

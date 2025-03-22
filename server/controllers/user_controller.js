@@ -26,7 +26,7 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
     }
     return res
       .status(401)
-      .json({ message: "VerifiedAccessToken", status: true});
+      .json({ message: "VerifiedAccessToken", status: true });
     next();
   } catch (error) {
     throw new ApiError(401, error.message);
@@ -35,9 +35,9 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
 
 export const signup = asyncHandler(async (req, res) => {
   try {
-    
-    const { name, email, password, role } = req.body;
-    if (!name || !email || !password || !role) {
+    const { name, email, password, role, department } = req.body;
+
+    if (!name || !email || !password || !role || !department) {
       return res
         .status(400)
         .json({ message: "All fields are required", status: false });
@@ -51,13 +51,14 @@ export const signup = asyncHandler(async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     const newUser = await User.create({
       name,
       email,
       role,
+      department,
       otpToVerify: otp,
       password: hashedPassword,
     });
@@ -68,22 +69,17 @@ export const signup = asyncHandler(async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    await sendVerificationEmail(newUser.email,otp,name);
+    await sendVerificationEmail(newUser.email, otp, name);
 
     res.cookie("accessToken", accessToken, { httpOnly: true, secure: true });
-    res
-      .status(201)
-      .json({
-        message: "Signup successful",
-        user: newUser,
-        accessToken,
-        status: true,
-      });
-
+    res.status(201).json({
+      message: "Signup successful",
+      user: newUser,
+      accessToken,
+      status: true,
+    });
   } catch (error) {
-    res
-        .status(500)
-        .json("Internal Server Error")
+    res.status(500).json("Internal Server Error");
     throw new ApiError(500, error);
   }
 });
@@ -92,7 +88,6 @@ export const verifyEmail = asyncHandler(async (req, res) => {
   const { otp } = req.query;
   const userId = req.user._id;
 
-  
   try {
     if (!otp) {
       return res.status(400).json({ message: "OTP is required" });
@@ -106,7 +101,7 @@ export const verifyEmail = asyncHandler(async (req, res) => {
     if (user.isVerified) {
       return res.status(402).json({ message: "User is already verified" });
     }
-    
+
     if (user.otpToVerify !== otp) {
       return res.status(403).json({ message: "Invalid OTP" });
     }
@@ -120,8 +115,6 @@ export const verifyEmail = asyncHandler(async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
-
-
 
 export const login = asyncHandler(async (req, res) => {
   try {
@@ -161,21 +154,54 @@ export const login = asyncHandler(async (req, res) => {
   }
 });
 
-export const getUsers = asyncHandler(async (req, res) => {
+export const getUser = asyncHandler(async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+
+    if (!req.user || !req.user._id) {
+      return next(new ApiError(400, "User ID not found in request"));
+    }
+
+     const user = await User.findById(userId);
+
+     if (!user) {
+       return next(new ApiError(404, "User not found"));
+     }
+
+    res.status(200).json({
+      success: true,
+      message: "User fetched successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    next(new ApiError(500, "Internal Server Error"));
+  }
+});
+
+export const getUsers = asyncHandler(async (req, res, next) => {
   try {
     const { type } = req.query;
-    console.log(type);
-    
+    console.log(`Requested user role: ${type}`);
+
+    const validRoles = ["Employee", "Administrator", "SupportTeam"];
+
     let filter = {};
-    if (type == "User" || type == "Expert") {
+
+    if (type && validRoles.includes(type)) {
       filter.role = type;
     }
-    
+
     const users = await User.find(filter);
 
-    res.status(200).json({ message: "Users Fetched Successfully", users });
+    res.status(200).json({
+      success: true,
+      message: "Users fetched successfully",
+      users,
+    });
   } catch (error) {
-    throw new ApiError(500, error.message);
+    console.error("Error fetching users:", error);
+    next(new ApiError(500, "Internal Server Error"));
   }
 });
 

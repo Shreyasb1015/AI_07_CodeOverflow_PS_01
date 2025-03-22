@@ -34,13 +34,13 @@ import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
   const dispatch=useDispatch();
-  const navigate=useNavigate();
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     password: "",
     confirmPassword: "",
     role: "",
+    department: ""
   });
   const [otpValue, setOtpValue] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -93,7 +93,7 @@ const Register = () => {
 
   // Handle Form Submission
   const handleSubmit = async () => {
-    const { username, email, password, confirmPassword, role } = formData;
+    const { username, email, password, confirmPassword, role, department } = formData;
 
     if (password !== confirmPassword) {
       toast("Error", {
@@ -112,6 +112,7 @@ const Register = () => {
         email,
         password,
         role,
+        department
       });
 
       console.log("✅ Registration successful:", response.data);
@@ -173,11 +174,10 @@ const Register = () => {
       {/* Registration Form */}
       <div
         className="w-1/2 p-8 flex flex-col justify-center"
-        style={{ 
+        style={{
           backgroundColor: "var(--black-color)",
-          color: "white"
-         }}
-      
+          color: "white",
+        }}
       >
         <h2
           className="text-4xl mb-6 font-bold"
@@ -255,9 +255,56 @@ const Register = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectItem value="user">Employees</SelectItem>
-              <SelectItem value="expert">Administrators</SelectItem>
-              <SelectItem value="admin">Support Teams</SelectItem>
+              <SelectItem value="Employee">Employee</SelectItem>
+              <SelectItem value="Administrator">Administrator</SelectItem>
+              <SelectItem value="SupportTeam">SupportTeam</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+
+        <label
+          className="block mb-2 text-sm font-medium mt-4"
+          style={{ color: "var(--white-color)" }}
+        >
+          Department
+        </label>
+
+        <Select
+          onValueChange={(value) =>
+            setFormData({ ...formData, department: value })
+          }
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select a department" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="Sales & Marketing">
+                Sales & Marketing
+              </SelectItem>
+              <SelectItem value="Operations & Planning">
+                Operations & Planning
+              </SelectItem>
+              <SelectItem value="Procurement & Vendor Management">
+                Procurement & Vendor Management
+              </SelectItem>
+              <SelectItem value="Inventory & Warehouse Management">
+                Inventory & Warehouse Management
+              </SelectItem>
+              <SelectItem value="Manufacturing & Production">
+                Manufacturing & Production
+              </SelectItem>
+              <SelectItem value="Quality Assurance">
+                Quality Assurance
+              </SelectItem>
+              <SelectItem value="Dispatch & Logistics">
+                Dispatch & Logistics
+              </SelectItem>
+              <SelectItem value="HR & Admin">HR & Admin</SelectItem>
+              <SelectItem value="Accounts & Finance">
+                Accounts & Finance
+              </SelectItem>
+              <SelectItem value="IT & Development">IT & Development</SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>

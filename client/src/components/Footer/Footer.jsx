@@ -16,7 +16,7 @@ const Footer = () => {
             whileInView={{ opacity: 1 }}
             className="space-y-4"
           >
-            <h3 className="text-xl font-bold">TechWave</h3>
+            <h3 className="text-xl font-bold">EchoMind</h3>
             <p className="text-muted-foreground">
               Empowering the future through innovative solutions
             </p>
