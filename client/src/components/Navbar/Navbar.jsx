@@ -2,35 +2,18 @@ import { motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom"; // Import useLocation
 import { useTheme } from "../../context/Theme"; // Adjust the path as needed
 import { Sun, Moon } from "lucide-react";
-import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { logout } from "../../redux/slice/Userslice"; // Adjust the path as needed
 
 const navItems = [
-  { name: "Home", path: "/" },
-  { name: "Features", path: "#" },
-  { name: "Chat", path: "/chat" },
+  { name: "Home", path: "/"},
   { name: "Profile", path: "/profile" },
-  { name: "Experts", path: "/experts" },
-  { name: "VideoCall", path: "/videocall" },
+  { name: "Chat", path: "/chat" },
+  { name: "Video", path: "/videocall" },
 ];
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
 
   const location = useLocation(); // Get the current route location
-  const handleLogout = () => {
-    // Remove user data from localStorage
-    localStorage.removeItem("currentUser");
-
-    // Dispatch logout action to clear Redux state
-    dispatch(logout());
-
-    // Navigate to the login page
-    navigate("/login");
-  };
 
 
   return (
@@ -49,7 +32,7 @@ const Navbar = () => {
           transition={{ type: "spring", stiffness: 300 }}
           className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-orange-800 bg-clip-text text-transparent"
         >
-          CodeCommandos
+          EchoMind{" "}
         </motion.div>
 
         {/* Navigation Links */}
@@ -85,20 +68,6 @@ const Navbar = () => {
               </motion.div>
             );
           })}
-          {/* Logout Link */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: navItems.length * 0.1 }}
-            whileHover={{ scale: 1.1 }}
-          >
-            <button
-              onClick={handleLogout}
-              className="relative group px-4 py-2 rounded-full transition-colors hover:text-orange-500"
-            >
-              Logout
-            </button>
-          </motion.div>
 
           {/* Theme Toggle Button */}
           <motion.button

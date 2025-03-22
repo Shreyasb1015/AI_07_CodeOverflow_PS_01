@@ -55,17 +55,19 @@ const Home = () => {
             transition={{ duration: 0.8 }}
             className="max-w-4xl space-y-6"
           >
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-orange-500 to-orange-800 bg-clip-text text-transparent">
-              Transform Your Digital Presence
+            <h1 className="text-3xl md:text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-800 bg-clip-text text-transparent">
+              Amplifying Intelligence, Streamlining Efficiency
             </h1>
 
             <div className="text-2xl md:text-3xl text-muted-foreground">
               <Typewriter
                 words={[
-                  "AI-Powered Solutions",
-                  "Cloud Infrastructure",
-                  "Real-Time Analytics",
-                  "Enterprise Security",
+                  "Seamless ERP Integration",
+                  "AI-Driven Insights",
+                  "Real-Time Data Analytics",
+                  "Automated GST Compliance",
+                  "Streamlined Inventory Management",
+                  "Advanced User Access Control",
                 ]}
                 loop={true}
                 cursor
@@ -129,7 +131,9 @@ const Home = () => {
 
         {/* Reviews Section */}
         <section className="my-24">
-          <h2 className="text-4xl font-bold text-center mb-12">What Our Clients Say</h2>
+          <h2 className="text-4xl font-bold text-center mb-12">
+            What Our Clients Say
+          </h2>
           <div className="grid md:grid-cols-3 gap-8">
             {reviews.map((review, index) => (
               <ReviewCard key={index} review={review} index={index} />
@@ -139,10 +143,12 @@ const Home = () => {
 
         {/* FAQ Section */}
         <section className="my-24 max-w-3xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-12">Frequently Asked Questions</h2>
+          <h2 className="text-4xl font-bold text-center mb-12">
+            Frequently Asked Questions
+          </h2>
           <Accordion>
             <AccordionItem
-              title="What makes TechWave different?"
+              title="What makes EchoMind different?"
               content="Our unique combination of AI-powered analytics and enterprise-grade security sets us apart from competitors."
             />
             <AccordionItem

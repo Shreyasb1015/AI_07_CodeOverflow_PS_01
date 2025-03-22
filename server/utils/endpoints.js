@@ -13,7 +13,8 @@ export const SOCIAL_ROUTES = {
 
 export const USER_ROUTES = {
   GET_USERS: "/",
-  GET_NOTIF: "/notif"
+  GET_NOTIF: "/notif",
+  GET_USER: "/me"
 }
 
 export const CHAT_ROUTES = {
