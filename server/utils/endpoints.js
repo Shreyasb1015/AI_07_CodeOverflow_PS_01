@@ -40,5 +40,6 @@ export const API_ROUTES = {
   SOCIAL: "/api/social",
   CHAT: "/api/chat",
   MEETING: "/api/meet",
-  AVATAR: "/api/avatar"
+  AVATAR: "/api/avatar",
+  COMPLAINT: "/api/complaint"
 };
