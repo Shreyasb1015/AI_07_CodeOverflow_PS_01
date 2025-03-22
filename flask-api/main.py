@@ -761,7 +761,7 @@ def cleanup_old_sessions():
 
 HUGGINGFACE_API_URL = "https://api-inference.huggingface.co/models/facebook/wav2vec2-base-960h"
 HEADERS = {
-    "Authorization": f"Bearer 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"
+    "Authorization": f"Bearer {os.getenv('HUGGINGFACE_TOKEN')}"
 }
 def transcribe_audio(audio_bytes):
     response = requests.post(HUGGINGFACE_API_URL, headers=HEADERS, data=audio_bytes)
@@ -903,7 +903,7 @@ what information is missing.
             "transcription": {"error": str(e)}
         }), 500
         
-        
+
 if __name__ == "__main__":
     app.run(debug=True)
       
