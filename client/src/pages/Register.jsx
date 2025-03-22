@@ -160,13 +160,13 @@ const Register = () => {
         Welcome to the Future of ERP Support with AI 
       </h1>
       <p className="text-base mb-4" style={{ color: "var(--white-color)" }}>
-      Meet AvaERP—your AI-powered guide for seamless GST, Sales, and Production workflows. Say goodbye to manuals and hello to lifelike, conversational support. 
+      Meet EchoMind—your AI-powered guide for seamless GST, Sales, and Production workflows. Say goodbye to manuals and hello to lifelike, conversational support. 
       </p>
       {/* <p className="text-base mb-4" style={{ color: "var(--white-color)" }}>
-        Step into a world where ERP systems come alive. Say goodbye to static manuals and hello to AvaERP—your AI-powered guide that speaks, listens, and understands. Whether you're navigating GST compliance, managing sales orders, or troubleshooting production workflows, AvaERP is here to transform complexity into clarity.
+        Step into a world where ERP systems come alive. Say goodbye to static manuals and hello to EchoMind—your AI-powered guide that speaks, listens, and understands. Whether you're navigating GST compliance, managing sales orders, or troubleshooting production workflows, EchoMind is here to transform complexity into clarity.
       </p>
       <p className="text-base mb-4" style={{ color: "var(--white-color)" }}>
-        With lifelike avatar interactions, real-time answers, and seamless integration with IDMS ERP, AvaERP doesn’t just solve problems—it makes every interaction feel human. From multilingual support to dynamic workflows, experience ERP like never before.
+        With lifelike avatar interactions, real-time answers, and seamless integration with IDMS ERP, EchoMind doesn’t just solve problems—it makes every interaction feel human. From multilingual support to dynamic workflows, experience ERP like never before.
       </p> */}
         </div>
       </div>

@@ -8,6 +8,7 @@ const navItems = [
   { name: "Profile", path: "/profile" },
   { name: "Chat", path: "/chat" },
   { name: "Video", path: "/videocall" },
+  { name: "Chatting Avatar", path: "/chatAvatar" },
 ];
 
 const Navbar = () => {

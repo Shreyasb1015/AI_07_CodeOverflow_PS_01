@@ -136,7 +136,7 @@ const Login = () => {
       Your ERP, Simplified
     </h1>
     <p className="text-base mb-4" style={{ color: "var(--white-color)" }}>
-      Step into the future of enterprise resource planning with AvaERP. From GST compliance to production workflows, experience seamless, AI-driven support that feels like talking to an expert.
+      Step into the future of enterprise resource planning with EchoMind. From GST compliance to production workflows, experience seamless, AI-driven support that feels like talking to an expert.
     </p>
     <div className="flex items-center mt-4">
       <p
