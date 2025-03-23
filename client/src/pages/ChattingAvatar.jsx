@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { Avatar, AvatarImage, AvatarFallback} from "@/components/ui/avatar";
+import React, { useState, useRef, useEffect } from "react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,9 +28,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { CHATAVATAR_URL } from "../api/flask_routes";
-import InfiniteMirror from "../components/InfiniteMirror/InfiniteMirror";
 import { DIDVideoGenerator } from "./video-generator";
-
 
 const ChattingAvatar = () => {
   const { theme } = useTheme();
@@ -43,47 +41,146 @@ const ChattingAvatar = () => {
     3: [],
   });
   const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false);
-  const [loading,setLoading] = useState(false)
-  const [vidUrl,setVidUrl] = useState(null)
-  const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [vidUrl, setVidUrl] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [audioURL, setAudioURL] = useState(null);
+  const videoRef = useRef(null);
+  const [stream, setStream] = useState(null);
+  const [cameraOpen,setIsCameraOpen] = useState(false)
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const fileInputRef = useRef(null);
-  const urls = [
-    "https://raw.githubusercontent.com/Shreyasb1015/AI_07_CodeOverflow_PS_01/refs/heads/main/client/src/assets/avatar/avatar1.jpg",
-    "https://raw.githubusercontent.com/Shreyasb1015/AI_07_CodeOverflow_PS_01/refs/heads/main/client/src/assets/avatar/avatar2.jpg",
-    "https://raw.githubusercontent.com/Shreyasb1015/AI_07_CodeOverflow_PS_01/refs/heads/main/client/src/assets/avatar/avatar3.jpg",
-  ];
-  const [videoGenerator] = useState(() => new DIDVideoGenerator("YmFnd2VzaHJleWFzMTAxNUBnbWFpbC5jb20:cyHc6ebyVGf-GE5oLUiqR"));
+    const canvasRef = useRef(document.createElement("canvas"));
+    let frameCount = 0;
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+      setStream(mediaStream);
+    } catch (error) {
+      console.error("Error accessing camera:", error);
+    }
+  };
 
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+  };
+  const [videoGenerator] = useState(
+    () =>
+      new DIDVideoGenerator(
+        "YmFnd2VzaHJleWFzMTAxNUBnbWFpbC5jb20:cyHc6ebyVGf-GE5oLUiqR"
+      )
+  );
+  const sendFrame = async (imageBlob,input_text,token) => {
+    const formData = new FormData();
+    formData.append("image", imageBlob, "frame.jpg");
+    formData.append("token", token);
+    formData.append("input_text",input_text)
+
+    try {
+      const response = await axios.post(
+        "http://localhost/analyze-frame",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      if(token ==  "end"){
+        if(response_code == 200) {
+          return response
+        }
+        else{
+          toast.error("Error giving response on user emotions")
+        }
+      }
+      const success = response.data.success;
+      if (!success) {
+        toast.error("Failed to send a frame");
+      } else {
+        console.log("Frame sent successfully:", response.data);
+      }
+    } catch (error) {
+      if (error.response) {
+        console.error("Server error:", error.response.data);
+        toast.error(
+          `Error: ${error.response.data.message || "Failed to send frame"}`
+        );
+      } else if (error.request) {
+        console.error("No response received:", error.request);
+        toast.error("No response from server. Check network.");
+      } else {
+        console.error("Request error:", error.message);
+        toast.error("Unexpected error occurred.");
+      }
+    }
+  };
+
+  const captureFrame = (isFinal,input_text) => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (blob) {
+        if (frameCount === 0) console.log("First frame sent");
+        if (frameCount === 30) console.log("Second frame sent");
+        if (isFinal) {
+          return sendFrame(blob,input_text,"end")
+        }else{
+          sendFrame(blob,"","continue");
+        }
+      }
+    }, "image/jpeg");
+  };
+  useEffect(() => {
+    let interval;
+    if (cameraOpen) {
+      interval = setInterval(() => {
+        if (frameCount % 30 === 0) captureFrame();
+        frameCount++;
+      }, 100);
+    }
+    return () => clearInterval(interval);
+  }, [cameraOpen]);
   const letAISpeak = async () => {
     try {
       setLoading(true);
-      toast.loading('Generating video...');
+      toast.loading("Generating video...");
 
       // Generate the video
       const result = await videoGenerator.generateVideo(
         recentText,
-        'https://d-id-public-bucket.s3.us-west-2.amazonaws.com/alice.jpg'
+        "https://d-id-public-bucket.s3.us-west-2.amazonaws.com/alice.jpg"
       );
 
       if (result.success) {
         setVidUrl(result.videoUrl);
-        toast.success('Video generated successfully!');
+        toast.success("Video generated successfully!");
       } else {
         toast.error(`Failed to generate video: ${result.message}`);
       }
     } catch (error) {
-      console.error('Error generating video:', error);
-      toast.error('Error generating video');
+      console.error("Error generating video:", error);
+      toast.error("Error generating video");
     } finally {
       setLoading(false);
       toast.dismiss();
     }
   };
-
 
   const avatarImages = {
     1: "/src/assets/avatar/avatar1.jpg",
@@ -114,9 +211,14 @@ const ChattingAvatar = () => {
         ],
       }));
 
-      const response = await axiosClient.post(CHATAVATAR_URL, {
-        user_input: userMessage,
-      });
+      let response
+      if (cameraOpen) {
+        response = captureFrame(true,message)
+      }else{
+        response = await axiosClient.post(CHATAVATAR_URL, {
+          user_input: userMessage,
+        });
+      }
 
       // Remove the temporary "Thinking..." message
       setChatHistory((prev) => ({
@@ -255,19 +357,19 @@ const ChattingAvatar = () => {
       setIsRecording(false);
       return;
     }
-  
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-  
+
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
-  
+
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, {
           type: "audio/wav",
@@ -406,7 +508,7 @@ const ChattingAvatar = () => {
         // Clean up the stream after processing
         stream.getTracks().forEach((track) => track.stop());
       };
-  
+
       mediaRecorder.start();
       setIsRecording(true);
       toast.info(
@@ -417,7 +519,7 @@ const ChattingAvatar = () => {
       toast.error("Microphone access denied!");
     }
   };
-  
+
   const handlePlayAudio = (url) => {
     const audio = new Audio(url);
     audio.play();
@@ -454,24 +556,27 @@ const ChattingAvatar = () => {
             transition={{ type: "spring", stiffness: 300 }}
           >
             <Avatar className="h-48 w-48 border-4 border-orange-500">
-              {
-                vidUrl == null ? <AvatarImage src={avatarImages[selectedModel]} alt="Avatar" />
-                : <video src={vidUrl} autoPlay onEnded={()=>{
-                  setLoading(false)
-                  setVidUrl(null)
-                }}></video>
-              }
+              {vidUrl == null ? (
+                <AvatarImage src={avatarImages[selectedModel]} alt="Avatar" />
+              ) : (
+                <video
+                  src={vidUrl}
+                  autoPlay
+                  onEnded={() => {
+                    setLoading(false);
+                    setVidUrl(null);
+                  }}
+                ></video>
+              )}
               <AvatarFallback>AI</AvatarFallback>
             </Avatar>
             <Button
               variant="outline"
               onClick={letAISpeak}
-              disabled={loading || recentText == "" }
+              disabled={loading || recentText == ""}
               className="w-full mt-4"
             >
-              {
-                loading ? "Loading ... " : "Speak"
-              }
+              {loading ? "Loading ... " : "Speak"}
             </Button>
           </motion.div>
           <div className="flex flex-col gap-4 w-full">
@@ -540,6 +645,7 @@ const ChattingAvatar = () => {
                       {chat.text}
                     </div>
                   )}
+
                   {chat.audio && (
                     <Button
                       variant="outline"
@@ -548,6 +654,7 @@ const ChattingAvatar = () => {
                       <Send className="h-5 w-5" /> Play Audio
                     </Button>
                   )}
+
                   {chat.file && chat.type === "image" && (
                     <img
                       src={chat.file}
@@ -555,13 +662,21 @@ const ChattingAvatar = () => {
                       className="max-w-[80%] rounded-lg"
                     />
                   )}
-                  {chat.file && chat.type === "video" && (
+
+                  {chat.type === "video" && cameraOpen && (
                     <video
-                      src={chat.file}
-                      controls
-                      className="max-w-[80%] rounded-lg"
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      className="rounded-lg"
+                      style={{
+                        width: "300px",
+                        height: "200px",
+                        objectFit: "cover",
+                      }}
                     />
                   )}
+
                   <span className="text-sm text-muted-foreground">
                     {chat.sender === "user" ? "You" : `Model ${selectedModel}`}
                   </span>
@@ -583,22 +698,35 @@ const ChattingAvatar = () => {
               onChange={handleFileUpload}
               accept="image/*, video/*"
             />
-            <Dialog
-              open={isCameraDialogOpen}
-              onOpenChange={setIsCameraDialogOpen}
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (cameraOpen) {
+                  stopCamera();
+                  setIsCameraOpen(false);
+                } else {
+                  startCamera();
+                  setIsCameraOpen(true);
+                  setChatHistory((prev) => ({
+                    ...prev,
+                    [selectedModel]: [
+                      ...prev[selectedModel],
+                      {
+                        sender: "user",
+                        type: "video",
+                        file: videoRef.current
+                          ? videoRef.current.srcObject
+                          : null, // Store stream reference
+                      },
+                    ],
+                  }));
+                }
+              }}
+              className={cameraOpen ? "bg-red-500 text-white" : ""}
             >
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Camera className="h-5 w-5" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="w-full max-w-4xl h-[80vh] left-0 transform translate-x-0">
-                <DialogHeader>
-                  <DialogTitle>Infinite Mirror</DialogTitle>
-                </DialogHeader>
-                <InfiniteMirror onClose={() => setIsCameraDialogOpen(false)} />
-              </DialogContent>
-            </Dialog>
+              <Camera className="h-5 w-5" />
+            </Button>
+
             <Button
               variant="outline"
               onClick={handleVoiceInput}
