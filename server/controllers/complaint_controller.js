@@ -6,7 +6,7 @@ import { User } from "../models/user_model.js";
 
 
 const checkAdmin = (req) => {
-  if (!req.user || req.user.role !== "Administrator") {
+  if (!req.user || req.user.role !== "SupportTeam") {
     throw new ApiError(403, "Access denied. Admins only.");
   }
 };
@@ -45,8 +45,7 @@ export const getAllComplaints = asyncHandler(async (req, res) => {
 
     const complaints = await Complaint.find()
       .populate("userId", "name email")
-      .populate("aiAvatarId", "name");
-
+      
     res.status(200).json({ success: true, complaints });
   } catch (error) {
     throw new ApiError(500, error.message);
@@ -61,7 +60,6 @@ export const getComplaintById = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const complaint = await Complaint.findById(id)
       .populate("userId", "name email")
-      .populate("aiAvatarId", "name");
 
     if (!complaint) throw new ApiError(404, "Complaint not found");
 
@@ -76,9 +74,9 @@ export const updateComplaintStatus = asyncHandler(async (req, res) => {
   try {
     checkAdmin(req); 
 
-    const { id } = req.params;
-    const { status } = req.body;
-
+    const { id,status} = req.params;
+    console.log(id,status);
+    
     const validStatuses = ["Pending", "In Progress", "Resolved", "Rejected"];
     if (!validStatuses.includes(status)) {
       throw new ApiError(400, "Invalid status");

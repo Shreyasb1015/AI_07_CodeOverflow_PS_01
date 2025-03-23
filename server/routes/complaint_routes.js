@@ -16,6 +16,6 @@ router.get("/", verifyJWT,getAllComplaints);
 
 router.get("/:id",verifyJWT, getComplaintById);
 
-router.get("/:id/status", verifyJWT,updateComplaintStatus);
+router.get("/:id/:status", verifyJWT,updateComplaintStatus);
 
 export default router;
