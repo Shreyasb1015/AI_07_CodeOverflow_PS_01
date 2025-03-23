@@ -32,8 +32,10 @@ import { login } from '../redux/slice/Userslice';
 import { useNavigate } from 'react-router-dom';
 
 
+
 const Register = () => {
   const dispatch=useDispatch();
+  const navigate=useNavigate();
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -68,6 +70,7 @@ const Register = () => {
             onClick: () => console.log("Toast closed"),
           },
         });
+        navigate("/");
         setIsDialogOpen(false)
       } else {
         toast("Verification Failed", {

@@ -125,7 +125,7 @@ const sendApologyMail = async (user_name,userEmail, issueType, description) => {
         body {
             font-family: Arial, sans-serif;
             background-color: #000; /* Black background */
-            color: #fff; /* White text */
+            color:white; /* White text */
             margin: 0;
             padding: 0;
         }

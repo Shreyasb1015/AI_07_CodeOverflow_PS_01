@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback} from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -29,9 +29,12 @@ import {
 } from "@/components/ui/dialog";
 import { CHATAVATAR_URL } from "../api/flask_routes";
 import InfiniteMirror from "../components/InfiniteMirror/InfiniteMirror";
+import { DIDVideoGenerator } from "./video-generator";
+
 
 const ChattingAvatar = () => {
   const { theme } = useTheme();
+  const [recentText, setRecentText] = useState("");
   const [selectedModel, setSelectedModel] = useState(1);
   const [message, setMessage] = useState("");
   const [chatHistory, setChatHistory] = useState({
@@ -40,17 +43,52 @@ const ChattingAvatar = () => {
     3: [],
   });
   const [isComplaintDialogOpen, setIsComplaintDialogOpen] = useState(false);
+  const [loading,setLoading] = useState(false)
+  const [vidUrl,setVidUrl] = useState(null)
   const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [audioURL, setAudioURL] = useState(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const fileInputRef = useRef(null);
+  const urls = [
+    "https://raw.githubusercontent.com/Shreyasb1015/AI_07_CodeOverflow_PS_01/refs/heads/main/client/src/assets/avatar/avatar1.jpg",
+    "https://raw.githubusercontent.com/Shreyasb1015/AI_07_CodeOverflow_PS_01/refs/heads/main/client/src/assets/avatar/avatar2.jpg",
+    "https://raw.githubusercontent.com/Shreyasb1015/AI_07_CodeOverflow_PS_01/refs/heads/main/client/src/assets/avatar/avatar3.jpg",
+  ];
+  const [videoGenerator] = useState(() => new DIDVideoGenerator("YmFnd2VzaHJleWFzMTAxNUBnbWFpbC5jb20:cyHc6ebyVGf-GE5oLUiqR"));
+
+  const letAISpeak = async () => {
+    try {
+      setLoading(true);
+      toast.loading('Generating video...');
+
+      // Generate the video
+      const result = await videoGenerator.generateVideo(
+        recentText,
+        'https://d-id-public-bucket.s3.us-west-2.amazonaws.com/alice.jpg'
+      );
+
+      if (result.success) {
+        setVidUrl(result.videoUrl);
+        toast.success('Video generated successfully!');
+      } else {
+        toast.error(`Failed to generate video: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error generating video:', error);
+      toast.error('Error generating video');
+    } finally {
+      setLoading(false);
+      toast.dismiss();
+    }
+  };
+
 
   const avatarImages = {
     1: "/src/assets/avatar/avatar1.jpg",
     2: "/src/assets/avatar/avatar2.jpg",
-    3: "/src/assets/avatar/avatar3.jpg",
+    3: "/src/assets/avatar/avatar4.jpg",
   };
 
   const handleSendMessage = async () => {
@@ -105,6 +143,7 @@ const ChattingAvatar = () => {
             },
           ],
         }));
+        setRecentText(responseContent);
       } else {
         setChatHistory((prev) => ({
           ...prev,
@@ -144,7 +183,6 @@ const ChattingAvatar = () => {
     const file = event.target.files[0];
     if (!file) return;
 
-  
     const previewURL = URL.createObjectURL(file);
     const tempMessage = {
       sender: "user",
@@ -159,7 +197,7 @@ const ChattingAvatar = () => {
     }));
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("image", file);
 
     try {
       const response = await axios.post(
@@ -190,6 +228,7 @@ const ChattingAvatar = () => {
             },
           ],
         }));
+        setRecentText(responseContent);
       } else {
         setChatHistory((prev) => ({
           ...prev,
@@ -216,44 +255,45 @@ const ChattingAvatar = () => {
       setIsRecording(false);
       return;
     }
-
+  
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-
+  
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
-
+  
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, {
           type: "audio/wav",
         });
+        // Add a loading message
+        setChatHistory((prev) => ({
+          ...prev,
+          [selectedModel]: [
+            ...prev[selectedModel],
+            { sender: "user", text: "Recording audio...", isLoading: true },
+          ],
+        }));
 
-        const audioFile = new File([audioBlob], "recording.mp3", {
-          type: "audio/mp3",
+        const audioFile = new File([audioBlob], "recording.wav", {
+          type: "audio/wav",
         });
 
         const formData = new FormData();
         formData.append("audio", audioFile);
 
-        const url = URL.createObjectURL(audioBlob);
-        setAudioURL(url);
-        setChatHistory((prev) => ({
-          ...prev,
-          [selectedModel]: [
-            ...prev[selectedModel],
-            { sender: "user", audio: url },
-          ],
-        }));
-
         try {
-          const response = await axios.post(
-            "http://localhost:5000/upload-audio",
+          // Indicate that speech processing is happening
+          toast.loading("Processing your speech...");
+
+          const response = await axiosClient.post(
+            "http://localhost:5000/transcribe",
             formData,
             {
               headers: {
@@ -262,34 +302,122 @@ const ChattingAvatar = () => {
             }
           );
 
-          if (!response.data.success) throw new Error("Failed to upload audio");
+          // Remove loading message
+          setChatHistory((prev) => ({
+            ...prev,
+            [selectedModel]: prev[selectedModel].filter((msg) => msg.isLoading),
+          }));
 
-          const audioURLFromServer = response.data.audioUrl;
+          // Process the response
+          if (response.data && response.data.response) {
+            // Get the transcribed text
+            const transcribedText =
+              response.data.transcription?.text ||
+              "Audio could not be transcribed";
 
+            // Get AI's response content
+            const responseContent =
+              response.data.response.content ||
+              "Sorry, I couldn't process your audio message.";
+
+            // Add the user's transcribed message to the chat
+            setChatHistory((prev) => ({
+              ...prev,
+              [selectedModel]: [
+                ...prev[selectedModel],
+                {
+                  sender: "user",
+                  text: `🎤 ${transcribedText}`,
+                  audio: URL.createObjectURL(audioBlob), // Include playable audio
+                },
+              ],
+            }));
+
+            // Add the AI's response
+            setChatHistory((prev) => ({
+              ...prev,
+              [selectedModel]: [
+                ...prev[selectedModel],
+                {
+                  sender: "ai",
+                  text: responseContent,
+                  responseCode: response.data.response.response_code,
+                  moduleReference: response.data.response.module_reference,
+                  relatedTransactions:
+                    response.data.response.related_transactions,
+                  suggestedReports: response.data.response.suggested_reports,
+                },
+              ],
+            }));
+            setRecentText(responseContent);
+            toast.success("Audio processed successfully!");
+
+            // If there are source documents, show a notification
+            if (
+              response.data.source_docs &&
+              response.data.source_docs.length > 0
+            ) {
+              toast.info(
+                `Found ${response.data.source_docs.length} relevant sources`
+              );
+            }
+          } else {
+            // Handle error case
+            setChatHistory((prev) => ({
+              ...prev,
+              [selectedModel]: [
+                ...prev[selectedModel],
+                { sender: "user", audio: URL.createObjectURL(audioBlob) },
+                {
+                  sender: "ai",
+                  text: "Sorry, I received an invalid response format for your audio.",
+                },
+              ],
+            }));
+            toast.error("Failed to process audio response.");
+          }
+        } catch (error) {
+          console.error("Error processing audio:", error);
+
+          // Remove loading message
+          setChatHistory((prev) => ({
+            ...prev,
+            [selectedModel]: prev[selectedModel].filter((msg) => msg.isLoading),
+          }));
+
+          // Add error messages
           setChatHistory((prev) => ({
             ...prev,
             [selectedModel]: [
               ...prev[selectedModel],
-              { sender: "user", audio: audioURLFromServer },
+              { sender: "user", audio: URL.createObjectURL(audioBlob) },
+              {
+                sender: "ai",
+                text: "Sorry, I encountered an error while processing your audio. Please try again.",
+              },
             ],
           }));
-
-          toast.success("Audio uploaded successfully!");
-        } catch (error) {
-          console.error("Error uploading audio:", error);
-          toast.error("Failed to upload audio.");
+          toast.error(
+            "Failed to process audio. " +
+              (error.response?.data?.error || error.message)
+          );
         }
-      };
 
+        // Clean up the stream after processing
+        stream.getTracks().forEach((track) => track.stop());
+      };
+  
       mediaRecorder.start();
       setIsRecording(true);
-      toast.info("Recording started...");
+      toast.info(
+        "Recording started... Press the microphone button again to stop."
+      );
     } catch (error) {
       console.error("Error accessing microphone:", error);
       toast.error("Microphone access denied!");
     }
   };
-
+  
   const handlePlayAudio = (url) => {
     const audio = new Audio(url);
     audio.play();
@@ -326,9 +454,24 @@ const ChattingAvatar = () => {
             transition={{ type: "spring", stiffness: 300 }}
           >
             <Avatar className="h-48 w-48 border-4 border-orange-500">
-              <AvatarImage src={avatarImages[selectedModel]} alt="Avatar" />
+              {
+                vidUrl == null ? <AvatarImage src={avatarImages[selectedModel]} alt="Avatar" />
+                : <video src={vidUrl} autoPlay onEnded={()=>{
+                  setLoading(false)
+                  setVidUrl(null)
+                }}></video>
+              }
               <AvatarFallback>AI</AvatarFallback>
             </Avatar>
+            <Button
+              variant="outline"
+              onClick={letAISpeak}
+              className="w-full mt-4"
+            >
+              {
+                loading ? "Loading ... " : "Speak"
+              }
+            </Button>
           </motion.div>
           <div className="flex flex-col gap-4 w-full">
             <Button
