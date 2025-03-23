@@ -214,6 +214,8 @@ const ChattingAvatar = () => {
       let response
       if (cameraOpen) {
         response = captureFrame(true,message)
+        setIsCameraOpen(false)
+        stopCamera()
       }else{
         response = await axiosClient.post(CHATAVATAR_URL, {
           user_input: userMessage,
