@@ -82,11 +82,11 @@ const ChattingAvatar = () => {
     const formData = new FormData();
     formData.append("image", imageBlob, "frame.jpg");
     formData.append("token", token);
-    formData.append("input_text",input_text)
+    formData.append("user_input",input_text)
 
     try {
       const response = await axios.post(
-        "http://localhost/analyze-frame",
+        "http://127.0.0.1:5000/analyze-frame",
         formData,
         {
           headers: {
@@ -95,7 +95,10 @@ const ChattingAvatar = () => {
         }
       );
       if(token ==  "end"){
-        if(response_code == 200) {
+        console.log("End is near")
+        console.log(response)
+        if(response.status == 200) {
+          console.log("Token is set to end.")
           return response
         }
         else{
@@ -124,28 +127,44 @@ const ChattingAvatar = () => {
     }
   };
 
-  const captureFrame = (isFinal,input_text) => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext("2d");
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => {
-      if (blob) {
-        if (frameCount === 0) console.log("First frame sent");
-        if (frameCount === 30) console.log("Second frame sent");
-        if (isFinal) {
-          return sendFrame(blob,input_text,"end")
-        }else{
-          sendFrame(blob,"","continue");
-        }
+  const captureFrame = (isFinal, input_text) => {
+    return new Promise((resolve, reject) => {
+      if (!videoRef.current || !canvasRef.current) {
+        return reject(new Error("Video or Canvas reference is not defined"));
       }
-    }, "image/jpeg");
+  
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
+  
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          if (frameCount === 0) console.log("First frame sent");
+          if (frameCount === 30) console.log("Second frame sent");
+  
+          if (isFinal) {
+            console.log("Final frame sent");
+            try {
+              const res = await sendFrame(blob, input_text, "end");
+              resolve(res); // Resolve the promise with the response
+            } catch (error) {
+              reject(error);
+            }
+          } else {
+            sendFrame(blob, "", "continue");
+            resolve(null); // No meaningful response to resolve when not final
+          }
+        } else {
+          reject(new Error("Failed to create blob"));
+        }
+      }, "image/jpeg");
+    });
   };
+  
   useEffect(() => {
     let interval;
     if (cameraOpen) {
@@ -190,7 +209,7 @@ const ChattingAvatar = () => {
 
   const handleSendMessage = async () => {
     if (message.trim() === "") return;
-
+  
     setChatHistory((prev) => ({
       ...prev,
       [selectedModel]: [
@@ -198,10 +217,10 @@ const ChattingAvatar = () => {
         { sender: "user", text: message },
       ],
     }));
-
+  
     const userMessage = message;
     setMessage("");
-
+  
     try {
       setChatHistory((prev) => ({
         ...prev,
@@ -210,29 +229,49 @@ const ChattingAvatar = () => {
           { sender: "ai", text: "Thinking...", isLoading: true },
         ],
       }));
-
-      let response
+  
+      let response;
       if (cameraOpen) {
-        response = captureFrame(true,message)
-        setIsCameraOpen(false)
-        stopCamera()
-      }else{
+        // Wait for the captureFrame promise to resolve
+        response = await captureFrame(true, message);
+        console.log(response);
+        console.log("I got response");
+        setIsCameraOpen(false);
+        stopCamera();
+      } else {
         response = await axiosClient.post(CHATAVATAR_URL, {
           user_input: userMessage,
         });
       }
-
+  
       // Remove the temporary "Thinking..." message
       setChatHistory((prev) => ({
         ...prev,
         [selectedModel]: prev[selectedModel].filter((msg) => !msg.isLoading),
       }));
-
-      if (response.data && response.data.response) {
+  
+      if (response?.data && response.data.response) {
         const responseContent =
           response.data.response.content ||
           "Sorry, I couldn't process your request.";
-
+  
+        const detectedEmotion = response.data.response.detected_emotion || "neutral";
+        const emotionConfidence = response.data.response.emotion_confidence || 1;
+  
+        // Emotion-based toast messages
+        const emotionMessages = {
+          happy: "We're glad you're happy and enjoying our platform! 😊",
+          sad: "We're sorry to see you're feeling sad. Let us know how we can help. 💙",
+          angry: "We understand you're upset. We're here to assist you. 🔧",
+          fear: "It seems you're feeling concerned. Let us reassure you. 🤝",
+          disgust: "We value your feedback. Let us address your concerns. 🛠️",
+          surprise: "Wow, you seem surprised! Let us explain further. 🎉",
+          neutral: "Thanks for reaching out! Let us assist you. 🤗",
+        };
+  
+        // Show the toast message dynamically
+        toast.info(emotionMessages[detectedEmotion] || emotionMessages["neutral"]);
+  
         setChatHistory((prev) => ({
           ...prev,
           [selectedModel]: [
@@ -262,12 +301,12 @@ const ChattingAvatar = () => {
       }
     } catch (error) {
       console.error("Error sending message to chatbot:", error);
-
+  
       setChatHistory((prev) => ({
         ...prev,
         [selectedModel]: prev[selectedModel].filter((msg) => !msg.isLoading),
       }));
-
+  
       setChatHistory((prev) => ({
         ...prev,
         [selectedModel]: [
@@ -278,11 +317,10 @@ const ChattingAvatar = () => {
           },
         ],
       }));
-
-      toast.error("Failed to get response from the chatbot.");
+  
+      toast.error("Failed to get a response from the chatbot.");
     }
   };
-
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;

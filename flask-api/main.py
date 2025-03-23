@@ -579,15 +579,17 @@ def analyze_frame():
             
         token = request.form.get('token', 'continue')  
         user_input = request.form.get('user_input', '')  
+        print(token)
+        print(user_input)   
         
         if image_file.filename == '':
             return jsonify({'error': 'No selected image'}), 400
             
         if session_id not in emotion_frames:
-            emotion_frames[session_id] = []
             emotion_locks[session_id] = Lock()
+            emotion_frames[session_id] = []
             print(f"Created new emotion session: {session_id}")
-            
+                    
         image_bytes = image_file.read()
         nparr = np.frombuffer(image_bytes, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -621,13 +623,16 @@ def analyze_frame():
             
             if len(emotion_frames[session_id]) > 20:  
                 emotion_frames[session_id] = emotion_frames[session_id][-20:]
+        print(token)
+        print(user_input)
         if token == 'end' and user_input:
+            print(token)
             response = process_final_frame(session_id, user_input, img)
+            print("Got response from func")
+            print(response)
+            response.set_cookie('session_tracker', session_id, max_age=1800)  
+            return response
         
-            resp = jsonify(response)
-            resp.set_cookie('session_tracker', session_id, max_age=1800)  
-            return resp
-               
         response = jsonify({
             'success': True,
             'session_id': session_id, 
@@ -692,7 +697,18 @@ User Query: {user_input}
 User's Emotional State: {dominant_emotion}
 Emotional Guidance: {emotion_guidance}
 
-Provide a response in the JSON format specified above, adapting your tone to match the user's emotional state.
+IMPORTANT: Your response must strictly adhere to the JSON format specified above. Do not change the structure of the JSON output under any circumstances. Ensure that the response includes:
+- "response_code" (e.g., "200", "403", "422")
+- "content" (the detailed response to the user's query, including the detected emotion explicitly)
+- "module_reference" (if applicable, or null)
+- "related_transactions" (a list of relevant transactions, or an empty list)
+- "suggested_reports" (a list of relevant reports, or an empty list)
+
+Adopt your tone to match the user's emotional state in the "content" field and explicitly mention the detected emotion in the "content" field. For example:
+- If the user is happy, start with "Oh, you look happy today! Here's the information you need: ..."
+- If the user is sad, start with "Oh, you look sad today. Let me help you with this: ..."
+
+Provide the response in the exact JSON format specified above.
 """
             
             result = model.invoke(full_prompt).content
@@ -785,7 +801,7 @@ and indicate what information is missing.
                 "emotion_counts": dict(emotion_counts) if valid_emotions else {"neutral": 1}
             }
         }
-        
+        print("Returning response data")
         return jsonify(response_data)
         
     except Exception as e:
