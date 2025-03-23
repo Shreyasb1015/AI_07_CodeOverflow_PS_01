@@ -466,6 +466,7 @@ const ChattingAvatar = () => {
             <Button
               variant="outline"
               onClick={letAISpeak}
+              disabled={loading || recentText == "" }
               className="w-full mt-4"
             >
               {
