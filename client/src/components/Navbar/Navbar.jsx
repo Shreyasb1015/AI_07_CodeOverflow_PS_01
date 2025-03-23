@@ -15,6 +15,9 @@ const navItems = [
 if (user?.role == "Administrator"){
   navItems.push({ name: "Knowledge Base", path: "knowledge-base" });
 }
+if (user?.role == "SupportTeam"){
+  navItems.push({ name: "View Complaints", path: "view-complaints" });
+}
 
 const Navbar = () => {
   console.log(user);
