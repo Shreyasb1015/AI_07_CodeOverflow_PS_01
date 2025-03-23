@@ -36,6 +36,7 @@
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.4.0",
     "react-simple-typewriter": "^5.0.1",
+    "recorder-js": "^1.0.7",
     "redux": "^5.0.1",
     "socket.io-client": "^4.8.1",
     "sonner": "^2.0.1",

@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/dialog";
 import { CHATAVATAR_URL } from "../api/flask_routes";
 import InfiniteMirror from "../components/InfiniteMirror/InfiniteMirror";
+import { DIDVideoGenerator } from "./video-generator";
+
 
 const ChattingAvatar = () => {
   const { theme } = useTheme();
@@ -54,29 +56,39 @@ const ChattingAvatar = () => {
     "https://raw.githubusercontent.com/Shreyasb1015/AI_07_CodeOverflow_PS_01/refs/heads/main/client/src/assets/avatar/avatar2.jpg",
     "https://raw.githubusercontent.com/Shreyasb1015/AI_07_CodeOverflow_PS_01/refs/heads/main/client/src/assets/avatar/avatar3.jpg",
   ];
+  const [videoGenerator] = useState(() => new DIDVideoGenerator("YmFnd2VzaHJleWFzMTAxNUBnbWFpbC5jb20:cyHc6ebyVGf-GE5oLUiqR"));
+
   const letAISpeak = async () => {
     try {
-      setLoading(true)
-      const response = await axios.post(
-        "http://localhost:5000/generate-video",
-        {
-          source_url: urls[selectedModel],
-          text: recentText,
-        }
+      setLoading(true);
+      toast.loading('Generating video...');
+
+      // Generate the video
+      const result = await videoGenerator.generateVideo(
+        recentText,
+        'https://d-id-public-bucket.s3.us-west-2.amazonaws.com/alice.jpg'
       );
-       const videoUrl = response.data.video_url;
-       setVidUrl(videoUrl)
-       setLoading(false)
+
+      if (result.success) {
+        setVidUrl(result.videoUrl);
+        toast.success('Video generated successfully!');
+      } else {
+        toast.error(`Failed to generate video: ${result.message}`);
+      }
     } catch (error) {
-      console.log("Error in speaking ai");
-      toast.error("AI cannot speak")
+      console.error('Error generating video:', error);
+      toast.error('Error generating video');
+    } finally {
+      setLoading(false);
+      toast.dismiss();
     }
   };
+
 
   const avatarImages = {
     1: "/src/assets/avatar/avatar1.jpg",
     2: "/src/assets/avatar/avatar2.jpg",
-    3: "/src/assets/avatar/avatar3.jpg",
+    3: "/src/assets/avatar/avatar4.jpg",
   };
 
   const handleSendMessage = async () => {
@@ -444,7 +456,7 @@ const ChattingAvatar = () => {
             <Avatar className="h-48 w-48 border-4 border-orange-500">
               {
                 vidUrl == null ? <AvatarImage src={avatarImages[selectedModel]} alt="Avatar" />
-                : <video src={vidUrl} onEnded={()=>{
+                : <video src={vidUrl} autoPlay onEnded={()=>{
                   setLoading(false)
                   setVidUrl(null)
                 }}></video>
