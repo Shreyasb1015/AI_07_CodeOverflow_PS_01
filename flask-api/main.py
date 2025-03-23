@@ -24,6 +24,7 @@ from collections import Counter
 import time
 from threading import Lock
 from flask import session
+import whisper
 
 
 
@@ -861,25 +862,21 @@ def transcribe():
 
     audio_file = request.files['audio']
     audio_bytes = audio_file.read()
-    
+
     try:
-        transcription_result = transcribe_audio(audio_bytes)
-        
-        if "error" in transcription_result:
-            return jsonify({
-                "response": {
-                    "response_code": "500",
-                    "content": f"Error in transcription: {transcription_result.get('error', 'Unknown error')}",
-                    "module_reference": None,
-                    "related_transactions": [],
-                    "suggested_reports": []
-                },
-                "source_docs": [],
-                "transcription": transcription_result
-            }), 500
-        user_input = transcription_result.get('text', '')
-        
-        if not user_input or len(user_input.strip()) < 3:  
+        # Save the audio to a temporary file
+        temp_audio_path = "temp_audio.wav"
+        with open(temp_audio_path, "wb") as f:
+            f.write(audio_bytes)
+
+        # Load the Whisper model
+        model = whisper.load_model("base")  # Use "small", "medium", or "large" for better accuracy
+
+        # Transcribe the audio
+        result = model.transcribe(temp_audio_path)
+        transcription_text = result.get("text", "").strip()
+
+        if not transcription_text or len(transcription_text) < 3:
             return jsonify({
                 "response": {
                     "response_code": "422",
@@ -889,21 +886,21 @@ def transcribe():
                     "suggested_reports": []
                 },
                 "source_docs": [],
-                "transcription": {"text": user_input}
+                "transcription": {"text": transcription_text}
             }), 422
-        
-        print(f"Transcribed text: {user_input}")
-        docs = fetch_from_knowledge_base(user_input)
-        
+
+        print(f"Transcribed text: {transcription_text}")
+        docs = fetch_from_knowledge_base(transcription_text)
+
         if not docs or len(docs) == 0:
             model = ChatGoogleGenerativeAI(
                 model="gemini-2.0-flash",
                 api_key=SecretStr(GOOGLE_GEMINI_API_KEY) if GOOGLE_GEMINI_API_KEY else None
             )
-            full_prompt = f"{MY_PROMPT}\n\nUser Query (from speech): {user_input}\n\nProvide a response in the JSON format specified above."
+            full_prompt = f"{MY_PROMPT}\n\nUser Query (from speech): {transcription_text}\n\nProvide a response in the JSON format specified above."
             result = model.invoke(full_prompt).content
             cleaned_result = clean_text_content(str(result))
-            
+
             try:
                 parsed_result = json.loads(cleaned_result)
             except Exception:
@@ -914,25 +911,25 @@ def transcribe():
                     "related_transactions": [],
                     "suggested_reports": []
                 }
-            
+
             return jsonify({
-                "response": parsed_result, 
+                "response": parsed_result,
                 "source_docs": [],
-                "transcription": {"text": user_input}
+                "transcription": {"text": transcription_text}
             })
-        
+
         doc_contents = [clean_text_content(doc.page_content) for doc in docs]
         doc_sources = [doc.metadata.get('source', 'Unknown') if doc.metadata else 'Unknown' for doc in docs]
-        
+
         formatted_docs = '\n\n'.join(doc_contents)
-        
+
         enhanced_prompt = f"""
 Based on the following information from our knowledge base:
 {'-' * 30}
 {formatted_docs}
 {'-' * 30}
 
-Please answer the user's query from speech: "{user_input}"
+Please answer the user's query from speech: "{transcription_text}"
 
 Use only the information provided above to answer the query. If the information is not sufficient 
 to provide a complete answer, please state what is known from the provided context and indicate 
@@ -945,7 +942,7 @@ what information is missing.
         )
         result = model.invoke(enhanced_prompt).content
         cleaned_result = clean_text_content(str(result))
-        
+
         try:
             result_json = json.loads(cleaned_result)
         except Exception:
@@ -956,19 +953,19 @@ what information is missing.
                 "related_transactions": [],
                 "suggested_reports": []
             }
-            
+
         clean_doc_contents = [clean_text_content(doc.page_content) for doc in docs]
-        
+
         response_data = {
             "response": result_json,
             "source_docs": [
                 {"content": clean_doc_contents[i], "source": doc_sources[i]} for i in range(len(clean_doc_contents))
             ],
-            "transcription": {"text": user_input}
+            "transcription": {"text": transcription_text}
         }
-        
+
         return jsonify(response_data)
-        
+
     except Exception as e:
         import traceback
         traceback.print_exc()
