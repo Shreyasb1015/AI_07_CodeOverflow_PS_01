@@ -8,7 +8,7 @@ import masterBadge from "../assets/badges/master.png";
 import legendBadge from "../assets/badges/legend.png";
 import { useTheme } from "../context/Theme";
 import { Edit, Save, Upload, X } from "lucide-react";
-import GoogleTranslate from "../components/GoogleTranslate";
+import GoogleTranslate from "../components/googletranslatecomponent/GoogleTranslate";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../redux/slice/Userslice";
